@@ -45,10 +45,7 @@ USER_ID=default-user
 ### Setup database
 
 ```bash
-# Genera Prisma Client
-npm run db:generate
-
-# Crea le tabelle nel database SQLite
+# Crea le tabelle nel database SQLite locale (via Drizzle)
 npm run db:push
 ```
 
@@ -57,6 +54,33 @@ npm run db:push
 ```bash
 npm run smoke-test
 ```
+
+## Quick Start (Demo Mode)
+
+Vuoi provare il tool senza configurare Google Search Console? La modalità demo genera due esperimenti con **70 giorni di metriche simulate** (rumore statistico realistico via Box-Muller):
+
+- **Esperimento Positivo** — incremento click del +46% nel periodo post (p-value < 0.01)
+- **Esperimento Neutro** — nessuna differenza significativa tra pre e post
+
+```bash
+# Genera i dati demo nel database locale
+npm run demo
+```
+
+Una volta completato, esplora i risultati:
+
+```bash
+# Elenca tutti gli esperimenti
+npx tsx src/cli.ts list
+
+# Visualizza dettaglio con grafico ASCII e analisi statistica
+npx tsx src/cli.ts status <ID>
+
+# Esporta le metriche in Excel o CSV
+npx tsx src/cli.ts export <ID>
+```
+
+> L'ID viene mostrato al termine di `npm run demo`. Puoi usare anche solo i primi 8 caratteri.
 
 ## Installazione come comando globale
 
@@ -167,27 +191,27 @@ docker run --env-file .env seo-testing-tool
 ```
 src/
   cli.ts                          Entry point CLI (commander)
-  cli/commands.ts                 6 comandi: add, list, status, run, export, delete
+  cli/commands.ts                 Comandi: add, list, status, run, export, delete
   cli/formatters.ts               Colori, tabelle, grafici ASCII
+  demo.ts                         Script per generazione dati demo
   index.ts                        Entry point cron job
   smoke-test.ts                   Verifica connessione DB
   stats/
-    StatisticalEngine.ts          Welch's t-test, outlier detection, stagionalita'
-    TDistribution.ts              Distribuzione t (Lanczos + Lentz)
+    StatisticalEngine.ts          Welch's t-test, outlier detection
+    TDistribution.ts              Distribuzione t (calcolo p-value)
   config/
     AnalysisConfig.ts             Soglie configurabili
     env.ts                        Config OAuth2
   database/
-    prisma.ts                     Singleton lazy Prisma (SQLite)
+    db.ts                         Connessione Drizzle + SQLite
+    schema.ts                     Schema database (Drizzle ORM)
     DatabaseService.ts            CRUD, transazioni, aggregati, paginazione
     TimeSeriesService.ts          Gap detection, recovery
   orchestrator/
-    SEOExperimentOrchestrator.ts  Orchestratore centrale (GSC -> analisi -> notifiche)
-  notifications/                  Alert, report settimanali
-  monitoring/                     URL redirect, domain migration, traffic detection
-  ui/                             Loading indicators, responsive, export
-prisma/
-  schema.prisma                   4 modelli: User, Test, Metric, AuditLog
+    SEOExperimentOrchestrator.ts  GSC -> Analisi -> Risultati
+  services/
+    ExportService.ts              Export Excel/CSV
+drizzle/                          Migrazioni e meta-dati SQL
 railway.json                      Config deploy Railway (cron 03:00 UTC)
 Dockerfile                        Build container Node.js 18+
 ```
@@ -212,4 +236,4 @@ MIT
 ---
 
 **Versione:** 1.0.0 Stable
-**Last Updated:** 2026-02-10
+**Last Updated:** 2026-02-12
