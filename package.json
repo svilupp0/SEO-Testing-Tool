@@ -20,7 +20,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "cli:run": "tsx src/cli.ts run",
-    "smoke-test": "tsx src/smoke-test.ts"
+    "smoke-test": "tsx src/smoke-test.ts",
+    "demo": "tsx src/demo.ts"
   },
   "keywords": [
     "seo",

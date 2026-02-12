@@ -21,7 +21,6 @@ export const tests = sqliteTable('Test', {
   lastPValue: real('lastPValue'),
   lastImprovement: real('lastImprovement'),
   userId: text('userId').notNull().references(() => users.id),
-  sharedWith: text('sharedWith').notNull().default('[]'),
   createdAt: text('createdAt').notNull().default(sql`(datetime('now'))`),
   updatedAt: text('updatedAt').notNull().default(sql`(datetime('now'))`),
 }, (table) => [

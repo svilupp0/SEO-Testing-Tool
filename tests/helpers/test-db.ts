@@ -36,7 +36,6 @@ export function createTestDb(): TestDB {
       "lastPValue" real,
       "lastImprovement" real,
       "userId" text NOT NULL REFERENCES "User"("id"),
-      "sharedWith" text NOT NULL DEFAULT '[]',
       "createdAt" text NOT NULL DEFAULT (datetime('now')),
       "updatedAt" text NOT NULL DEFAULT (datetime('now'))
     );

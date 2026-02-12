@@ -46,4 +46,10 @@ yarn-error.log*
 # Vitest
 .vitest/
 
-/src/generated/prisma
+# Database
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+drizzle/meta/
+drizzle/*.sql
