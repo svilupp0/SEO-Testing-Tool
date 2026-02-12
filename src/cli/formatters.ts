@@ -6,6 +6,7 @@
 
 import chalk from 'chalk';
 import Table from 'cli-table3';
+// @ts-ignore - no type declarations available
 import asciichart from 'asciichart';
 import type { AnalysisResult } from '../stats/StatisticalEngine.js';
 

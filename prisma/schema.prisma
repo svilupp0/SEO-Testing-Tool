@@ -1,10 +1,10 @@
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 model User {
@@ -17,7 +17,7 @@ model User {
 model Test {
   id              String    @id @default(uuid())
   name            String
-  urls            String[]
+  urls            String    @default("[]")
   siteUrl         String
   startDate       DateTime
   splitDate       DateTime
@@ -27,7 +27,7 @@ model Test {
   lastImprovement Float?
   userId          String
   user            User      @relation(fields: [userId], references: [id])
-  sharedWith      String[]  @default([])
+  sharedWith      String    @default("[]")
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   metrics         Metric[]

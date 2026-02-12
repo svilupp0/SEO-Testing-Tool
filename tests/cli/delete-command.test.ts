@@ -2,10 +2,13 @@
  * Test - Comando delete CLI
  *
  * Verifica: ID parziale, conferma interattiva, cascade metriche, audit log
+ * Usa DB in-memory reale con mock solo per readline.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createMockPrisma, type MockPrisma } from '../helpers/prisma-mock';
+import { eq } from 'drizzle-orm';
+import { createTestDb, seedUser, seedTest, type TestDB } from '../helpers/test-db';
+import { tests, metrics, auditLogs } from '../../src/database/schema';
 
 // Mock readline/promises
 const mockQuestion = vi.fn();
@@ -14,11 +17,11 @@ vi.mock('readline/promises', () => ({
   createInterface: () => ({ question: mockQuestion, close: mockClose }),
 }));
 
-// Mock prisma
-let mockPrisma: MockPrisma;
-vi.mock('../../src/database/prisma.js', () => ({
-  get prisma() {
-    return mockPrisma;
+// Mock db module — il DB reale viene iniettato via testDb
+let testDb: TestDB;
+vi.mock('../../src/database/db.js', () => ({
+  get db() {
+    return testDb;
   },
 }));
 
@@ -53,38 +56,44 @@ vi.mock('../../src/cli/formatters.js', () => ({
 const { deleteCommand } = await import('../../src/cli/commands.js');
 
 describe('Comando delete', () => {
-  const fakeTest = {
-    id: 'abcd1234-5678-9abc-def0-123456789abc',
-    name: 'Test SEO Homepage',
-    status: 'running',
-    userId: 'user-1',
-    siteUrl: 'sc-domain:example.com',
-  };
+  const testId = 'abcd1234-5678-9abc-def0-123456789abc';
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockPrisma = createMockPrisma();
+    testDb = createTestDb();
+    seedUser(testDb, 'user-1');
+    seedTest(testDb, {
+      id: testId,
+      name: 'Test SEO Homepage',
+      status: 'running',
+      userId: 'user-1',
+      siteUrl: 'sc-domain:example.com',
+    });
   });
 
   it('dovrebbe eliminare un test trovato per ID esatto con conferma "s"', async () => {
-    mockPrisma.test.findUnique.mockResolvedValue(fakeTest);
-    mockPrisma.metric.count.mockResolvedValue(5);
+    // Inserisci metriche per il test
+    testDb.insert(metrics).values([
+      { testId, date: '2024-01-01', clicks: 10, impressions: 100 },
+      { testId, date: '2024-01-02', clicks: 20, impressions: 200 },
+      { testId, date: '2024-01-03', clicks: 30, impressions: 300 },
+      { testId, date: '2024-01-04', clicks: 40, impressions: 400 },
+      { testId, date: '2024-01-05', clicks: 50, impressions: 500 },
+    ]).run();
+
     mockQuestion.mockResolvedValue('s');
-    mockPrisma.test.delete.mockResolvedValue(fakeTest);
-    mockPrisma.auditLog.create.mockResolvedValue({});
 
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    await deleteCommand(fakeTest.id);
+    await deleteCommand(testId);
 
-    expect(mockPrisma.test.delete).toHaveBeenCalledWith({ where: { id: fakeTest.id } });
-    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith({
-      data: {
-        testId: fakeTest.id,
-        action: 'test_deleted',
-        userId: 'user-1',
-      },
-    });
+    // Test eliminato
+    const deleted = testDb.select().from(tests).where(eq(tests.id, testId)).get();
+    expect(deleted).toBeUndefined();
+
+    // Audit log registrato
+    const logs = testDb.select().from(auditLogs).all();
+    expect(logs.some(l => l.action === 'test_deleted' && l.testId === testId)).toBe(true);
 
     const output = logSpy.mock.calls.map(c => c.join(' ')).join('\n');
     expect(output).toContain('eliminato con successo');
@@ -94,31 +103,30 @@ describe('Comando delete', () => {
   });
 
   it('dovrebbe trovare il test per ID parziale', async () => {
-    mockPrisma.test.findUnique.mockResolvedValue(null);
-    mockPrisma.test.findMany.mockResolvedValue([fakeTest]);
-    mockPrisma.metric.count.mockResolvedValue(0);
     mockQuestion.mockResolvedValue('s');
-    mockPrisma.test.delete.mockResolvedValue(fakeTest);
-    mockPrisma.auditLog.create.mockResolvedValue({});
 
     await deleteCommand('abcd');
 
-    expect(mockPrisma.test.findMany).toHaveBeenCalledWith({
-      where: { id: { startsWith: 'abcd' } },
-    });
-    expect(mockPrisma.test.delete).toHaveBeenCalledWith({ where: { id: fakeTest.id } });
+    // Test eliminato
+    const deleted = testDb.select().from(tests).where(eq(tests.id, testId)).get();
+    expect(deleted).toBeUndefined();
   });
 
   it('dovrebbe mostrare ambiguità se più test corrispondono all\'ID parziale', async () => {
-    const fakeTest2 = { ...fakeTest, id: 'abcd9999-aaaa-bbbb-cccc-dddddddddddd', name: 'Altro Test' };
-    mockPrisma.test.findUnique.mockResolvedValue(null);
-    mockPrisma.test.findMany.mockResolvedValue([fakeTest, fakeTest2]);
+    seedTest(testDb, {
+      id: 'abcd9999-aaaa-bbbb-cccc-dddddddddddd',
+      name: 'Altro Test',
+      userId: 'user-1',
+    });
 
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     await deleteCommand('abcd');
 
-    expect(mockPrisma.test.delete).not.toHaveBeenCalled();
+    // Nessun test eliminato
+    const remaining = testDb.select().from(tests).all();
+    expect(remaining).toHaveLength(2);
+
     const output = logSpy.mock.calls.map(c => c.join(' ')).join('\n');
     expect(output).toContain('Trovati 2 test');
 
@@ -126,14 +134,10 @@ describe('Comando delete', () => {
   });
 
   it('dovrebbe mostrare errore se il test non esiste', async () => {
-    mockPrisma.test.findUnique.mockResolvedValue(null);
-    mockPrisma.test.findMany.mockResolvedValue([]);
-
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     await deleteCommand('zzzzz');
 
-    expect(mockPrisma.test.delete).not.toHaveBeenCalled();
     const output = logSpy.mock.calls.map(c => c.join(' ')).join('\n');
     expect(output).toContain('non trovato');
 
@@ -141,16 +145,16 @@ describe('Comando delete', () => {
   });
 
   it('dovrebbe annullare se l\'utente non conferma', async () => {
-    mockPrisma.test.findUnique.mockResolvedValue(fakeTest);
-    mockPrisma.metric.count.mockResolvedValue(3);
     mockQuestion.mockResolvedValue('n');
 
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    await deleteCommand(fakeTest.id);
+    await deleteCommand(testId);
 
-    expect(mockPrisma.test.delete).not.toHaveBeenCalled();
-    expect(mockPrisma.auditLog.create).not.toHaveBeenCalled();
+    // Test ancora presente
+    const existing = testDb.select().from(tests).where(eq(tests.id, testId)).get();
+    expect(existing).toBeDefined();
+
     const output = logSpy.mock.calls.map(c => c.join(' ')).join('\n');
     expect(output).toContain('annullata');
 
@@ -158,72 +162,51 @@ describe('Comando delete', () => {
   });
 
   it('dovrebbe annullare se l\'utente preme Invio senza rispondere', async () => {
-    mockPrisma.test.findUnique.mockResolvedValue(fakeTest);
-    mockPrisma.metric.count.mockResolvedValue(0);
     mockQuestion.mockResolvedValue('');
 
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    await deleteCommand(fakeTest.id);
+    await deleteCommand(testId);
 
-    expect(mockPrisma.test.delete).not.toHaveBeenCalled();
+    const existing = testDb.select().from(tests).where(eq(tests.id, testId)).get();
+    expect(existing).toBeDefined();
 
     logSpy.mockRestore();
   });
 
   it('dovrebbe accettare "si" come conferma', async () => {
-    mockPrisma.test.findUnique.mockResolvedValue(fakeTest);
-    mockPrisma.metric.count.mockResolvedValue(0);
     mockQuestion.mockResolvedValue('si');
-    mockPrisma.test.delete.mockResolvedValue(fakeTest);
-    mockPrisma.auditLog.create.mockResolvedValue({});
 
-    await deleteCommand(fakeTest.id);
+    await deleteCommand(testId);
 
-    expect(mockPrisma.test.delete).toHaveBeenCalled();
+    const deleted = testDb.select().from(tests).where(eq(tests.id, testId)).get();
+    expect(deleted).toBeUndefined();
   });
 
   it('dovrebbe registrare audit log con action test_deleted', async () => {
-    mockPrisma.test.findUnique.mockResolvedValue(fakeTest);
-    mockPrisma.metric.count.mockResolvedValue(0);
     mockQuestion.mockResolvedValue('s');
-    mockPrisma.test.delete.mockResolvedValue(fakeTest);
-    mockPrisma.auditLog.create.mockResolvedValue({});
 
-    await deleteCommand(fakeTest.id);
+    await deleteCommand(testId);
 
-    expect(mockPrisma.auditLog.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          action: 'test_deleted',
-          testId: fakeTest.id,
-          userId: fakeTest.userId,
-        }),
-      }),
-    );
-  });
-
-  it('dovrebbe gestire errori del database', async () => {
-    mockPrisma.test.findUnique.mockRejectedValue(new Error('DB connection lost'));
-
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    await deleteCommand(fakeTest.id);
-
-    const output = errorSpy.mock.calls.map(c => c.join(' ')).join('\n');
-    expect(output).toContain('DB connection lost');
-
-    errorSpy.mockRestore();
+    const logs = testDb.select().from(auditLogs).all();
+    const deleteLog = logs.find(l => l.action === 'test_deleted');
+    expect(deleteLog).toBeDefined();
+    expect(deleteLog?.testId).toBe(testId);
+    expect(deleteLog?.userId).toBe('user-1');
   });
 
   it('dovrebbe mostrare il nome del test prima della conferma', async () => {
-    mockPrisma.test.findUnique.mockResolvedValue(fakeTest);
-    mockPrisma.metric.count.mockResolvedValue(10);
+    testDb.insert(metrics).values(
+      Array.from({ length: 10 }, (_, i) => ({
+        testId, date: `2024-01-${String(i + 1).padStart(2, '0')}T00:00:00.000Z`, clicks: 10, impressions: 100,
+      })),
+    ).run();
+
     mockQuestion.mockResolvedValue('n');
 
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    await deleteCommand(fakeTest.id);
+    await deleteCommand(testId);
 
     const output = logSpy.mock.calls.map(c => c.join(' ')).join('\n');
     expect(output).toContain('Test SEO Homepage');

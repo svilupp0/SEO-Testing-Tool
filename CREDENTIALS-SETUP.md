@@ -47,8 +47,8 @@ seo-testing-tool/
 Il file `.env` è già configurato con le tue credenziali:
 
 ```env
-GOOGLE_CLIENT_ID=548098099543-1et8nm1hm466tf7hcmqntjd07mk81olq.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=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
+GOOGLE_CLIENT_ID=54xxxqxxx.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCxx-xxxH
 GOOGLE_REDIRECT_URI=http://localhost
 ```
 

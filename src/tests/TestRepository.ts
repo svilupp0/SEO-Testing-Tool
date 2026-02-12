@@ -287,7 +287,7 @@ export class TestRepository {
     return userData.get(key) || null;
   }
 
-  async getAuditLog(userId: string, testId: string): Promise<AuditLogEntry> {
+  async getAuditLog(_userId: string, testId: string): Promise<AuditLogEntry> {
     const log = this.auditLogs.get(testId);
     if (!log) {
       throw new Error('Audit log not found');

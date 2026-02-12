@@ -116,7 +116,7 @@ export class LoadingIndicatorService {
    * Test 8.1 - Esegui task con timeout
    */
   async executeWithTimeout(
-    taskId: string,
+    _taskId: string,
     task: () => Promise<any>,
     timeoutMs: number
   ): Promise<TimeoutResult> {

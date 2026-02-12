@@ -1,21 +1,22 @@
 /**
  * TimeSeriesService
  *
- * Gestisce integrità e recupero dati serie temporali con Prisma:
+ * Gestisce integrità e recupero dati serie temporali con Drizzle ORM:
  * - Rilevamento gap temporali
  * - Recupero automatico dati mancanti
  * - Flag per tracciare recuperi
  * - Retention policy per dati vecchi
  */
 
-import type { PrismaClient } from '../generated/prisma/client.js';
-import { prisma as defaultPrisma } from './prisma.js';
+import { eq, and, gte, lte, desc } from 'drizzle-orm';
+import { db as defaultDb, type DrizzleDB } from './db.js';
+import { metrics } from './schema.js';
 
 export class TimeSeriesService {
-  private prisma: PrismaClient;
+  private db: DrizzleDB;
 
-  constructor(prismaClient?: PrismaClient) {
-    this.prisma = (prismaClient ?? defaultPrisma) as PrismaClient;
+  constructor(drizzleDb?: DrizzleDB) {
+    this.db = drizzleDb ?? defaultDb;
   }
 
   /**
@@ -24,39 +25,41 @@ export class TimeSeriesService {
   async saveData(testId: string, timeSeriesData: { date: string; clicks: number; impressions?: number }[]): Promise<void> {
     if (timeSeriesData.length === 0) return;
 
-    await (this.prisma as any).metric.createMany({
-      data: timeSeriesData.map((d) => ({
-        testId,
-        date: new Date(d.date),
-        clicks: d.clicks,
-        impressions: d.impressions ?? 0,
-      })),
-      skipDuplicates: true,
-    });
+    this.db
+      .insert(metrics)
+      .values(
+        timeSeriesData.map((d) => ({
+          testId,
+          date: new Date(d.date).toISOString(),
+          clicks: d.clicks,
+          impressions: d.impressions ?? 0,
+        })),
+      )
+      .onConflictDoNothing({ target: [metrics.testId, metrics.date] })
+      .run();
   }
 
   /**
    * Test 5.2 - Rileva gap nella serie temporale
    */
   async detectGaps(testId: string, startDate: string, endDate: string): Promise<{ date: string; reason: string }[]> {
-    // Recupera tutte le date presenti nel range
-    const existingMetrics = await (this.prisma as any).metric.findMany({
-      where: {
-        testId,
-        date: {
-          gte: new Date(startDate),
-          lte: new Date(endDate),
-        },
-      },
-      select: { date: true },
-      orderBy: { date: 'asc' },
-    });
+    const existingMetrics = this.db
+      .select({ date: metrics.date })
+      .from(metrics)
+      .where(
+        and(
+          eq(metrics.testId, testId),
+          gte(metrics.date, new Date(startDate).toISOString()),
+          lte(metrics.date, new Date(endDate).toISOString()),
+        ),
+      )
+      .orderBy(metrics.date)
+      .all();
 
     const existingDates = new Set(
-      existingMetrics.map((m: { date: Date }) => m.date.toISOString().split('T')[0]),
+      existingMetrics.map((m) => m.date.split('T')[0]),
     );
 
-    // Genera tutte le date attese nel range
     const gaps: { date: string; reason: string }[] = [];
     const current = new Date(startDate);
     const end = new Date(endDate);
@@ -76,25 +79,21 @@ export class TimeSeriesService {
    * Test 5.2 - Calcola date da fetchare (inclusi gap)
    */
   async getFetchDates(testId: string, today: string): Promise<string[]> {
-    // Trova l'ultima data con dati
-    const lastMetric = await (this.prisma as any).metric.findFirst({
-      where: { testId },
-      orderBy: { date: 'desc' },
-      select: { date: true },
-    });
+    const lastMetric = this.db
+      .select({ date: metrics.date })
+      .from(metrics)
+      .where(eq(metrics.testId, testId))
+      .orderBy(desc(metrics.date))
+      .limit(1)
+      .get();
 
     if (!lastMetric) return [today];
 
-    const lastDate = lastMetric.date.toISOString().split('T')[0];
-
-    // Trova gap dal giorno dopo l'ultimo dato fino a oggi
-    const dayAfterLast = new Date(lastDate);
-    dayAfterLast.setDate(dayAfterLast.getDate() + 1);
+    const lastDate = lastMetric.date.split('T')[0];
 
     const gaps = await this.detectGaps(testId, lastDate, today);
     const gapDates = gaps.map((g) => g.date);
 
-    // Aggiungi oggi se non è già nei gap
     if (!gapDates.includes(today)) {
       gapDates.push(today);
     }
@@ -103,39 +102,40 @@ export class TimeSeriesService {
   }
 
   /**
-   * Test 5.2 - Salva dati recuperati con flag gap_filled
+   * Test 5.2 - Salva dati recuperati con flag gap_filled (upsert)
    */
   async saveGapData(
     testId: string,
     recoveredData: { date: string; clicks: number; impressions: number },
   ) {
-    const saved = await (this.prisma as any).metric.upsert({
-      where: {
-        testId_date: {
-          testId,
-          date: new Date(recoveredData.date),
-        },
-      },
-      update: {
-        clicks: recoveredData.clicks,
-        impressions: recoveredData.impressions,
-        gapFilled: true,
-        filledAt: new Date(),
-      },
-      create: {
+    const dateIso = new Date(recoveredData.date).toISOString();
+    const now = new Date().toISOString();
+
+    this.db
+      .insert(metrics)
+      .values({
         testId,
-        date: new Date(recoveredData.date),
+        date: dateIso,
         clicks: recoveredData.clicks,
         impressions: recoveredData.impressions,
         gapFilled: true,
-        filledAt: new Date(),
-      },
-    });
+        filledAt: now,
+      })
+      .onConflictDoUpdate({
+        target: [metrics.testId, metrics.date],
+        set: {
+          clicks: recoveredData.clicks,
+          impressions: recoveredData.impressions,
+          gapFilled: true,
+          filledAt: now,
+        },
+      })
+      .run();
 
     return {
       ...recoveredData,
-      gap_filled: saved.gapFilled,
-      filled_at: saved.filledAt?.getTime() ?? Date.now(),
+      gap_filled: true,
+      filled_at: Date.now(),
     };
   }
 
@@ -148,7 +148,6 @@ export class TimeSeriesService {
     const todayTime = today.getTime();
     const daysDiff = (todayTime - gapTime) / (1000 * 60 * 60 * 24);
 
-    // Gap più vecchi di 30 giorni NON vengono recuperati
     return daysDiff <= 30;
   }
 }

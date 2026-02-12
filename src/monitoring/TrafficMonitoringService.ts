@@ -47,13 +47,12 @@ interface DowntimeRecord {
 
 export class TrafficMonitoringService {
   private testStatuses: Map<string, TestStatus> = new Map();
-  private trafficHistory: Map<string, GSCData[]> = new Map();
   private downtimeRecords: Map<string, DowntimeRecord[]> = new Map();
 
   /**
    * Test 7.3 - Rileva zero traffic
    */
-  async detectZeroTraffic(testId: string, gscData: GSCData[]): Promise<ZeroTrafficDetection> {
+  async detectZeroTraffic(_testId: string, gscData: GSCData[]): Promise<ZeroTrafficDetection> {
     // Conta giorni consecutivi con zero traffic
     let consecutiveDays = 0;
     let lastTrafficDate: Date | null = null;
@@ -177,7 +176,7 @@ export class TrafficMonitoringService {
   /**
    * Test 7.3 - Rileva recovery automatico
    */
-  async detectRecovery(testId: string, gscData: GSCData[]): Promise<RecoveryDetection> {
+  async detectRecovery(_testId: string, gscData: GSCData[]): Promise<RecoveryDetection> {
     // Verifica se c'è traffico recente
     const recentData = gscData.filter(
       (d) => d.date.getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000
@@ -224,7 +223,7 @@ export class TrafficMonitoringService {
   /**
    * Test 7.3 - Invia alert zero traffic
    */
-  async sendZeroTrafficAlert(testId: string, detection: ZeroTrafficDetection): Promise<boolean> {
+  async sendZeroTrafficAlert(_testId: string, detection: ZeroTrafficDetection): Promise<boolean> {
     if (!detection.hasZeroTraffic) {
       return false;
     }
@@ -252,7 +251,7 @@ export class TrafficMonitoringService {
    * Test 7.3 - Analizza traffico per rilevare anomalie
    */
   async analyzeTraffic(
-    testId: string,
+    _testId: string,
     trafficData: Array<{ date: string; clicks: number; impressions: number; ctr?: number; position?: number }>
   ): Promise<{
     isZeroTraffic: boolean;
@@ -294,7 +293,7 @@ export class TrafficMonitoringService {
    */
   async handleZeroTraffic(
     testId: string,
-    property: string,
+    _property: string,
     zeroTrafficData: { consecutiveZeroDays: number; sitePossiblyOffline: boolean }
   ): Promise<{
     action: string;
@@ -323,7 +322,7 @@ export class TrafficMonitoringService {
    * Test 7.3 - Genera alert zero traffic
    */
   async generateZeroTrafficAlert(
-    testId: string,
+    _testId: string,
     property: string,
     consecutiveDays: number
   ): Promise<{
@@ -347,7 +346,7 @@ export class TrafficMonitoringService {
    * Test 7.3 - Analizza risultati test (NON dichiara peggioramento se sito offline)
    */
   async analyzeTestResults(
-    testId: string,
+    _testId: string,
     testResults: {
       beforePeriod: { avgClicks: number; avgImpressions: number };
       afterPeriod: { avgClicks: number; avgImpressions: number };
@@ -383,8 +382,8 @@ export class TrafficMonitoringService {
    * Test 7.3 - Verifica recovery traffico
    */
   async checkTrafficRecovery(
-    testId: string,
-    property: string,
+    _testId: string,
+    _property: string,
     trafficData: Array<{ date: string; clicks: number; impressions: number }>
   ): Promise<{
     trafficRecovered: boolean;
@@ -412,7 +411,7 @@ export class TrafficMonitoringService {
    * Test 7.3 - Richiede sospensione test (con conferma utente)
    */
   async requestTestSuspension(
-    testId: string,
+    _testId: string,
     property: string,
     zeroTrafficData: { consecutiveZeroDays: number; sitePossiblyOffline: boolean }
   ): Promise<{

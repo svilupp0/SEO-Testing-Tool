@@ -17,4 +17,7 @@ RUN npx prisma generate
 COPY dist ./dist/
 COPY .env* ./
 
+# Il database SQLite viene creato automaticamente al primo avvio
+ENV DATABASE_URL=file:/app/data.db
+
 CMD ["npm", "run", "cli:run"]

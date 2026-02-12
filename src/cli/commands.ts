@@ -1,20 +1,26 @@
 /**
  * CLI Commands
  *
- * Implementazione dei 6 comandi: add, list, status, run, export, delete
+ * Implementazione dei 7 comandi: login, add, list, status, run, export, delete
  */
 
 import { createInterface } from 'readline/promises';
 import { writeFile } from 'fs/promises';
+import path from 'path';
 import chalk from 'chalk';
-import { prisma } from '../database/prisma.js';
+import inquirer from 'inquirer';
+import { eq, like, desc, count } from 'drizzle-orm';
+import { db } from '../database/db.js';
+import { users, tests, metrics, auditLogs, oauthTokens } from '../database/schema.js';
 import { StatisticalEngine } from '../stats/StatisticalEngine.js';
 import { SEOExperimentOrchestrator } from '../orchestrator/SEOExperimentOrchestrator.js';
-import { ExportService } from '../ui/ExportService.js';
+import { ReportExportService, type MetricRow, type ExportInput } from '../services/ExportService.js';
+import { GoogleOAuthService } from '../auth/GoogleOAuthService.js';
+import { TokenManager } from '../auth/TokenManager.js';
+import { getGoogleOAuthConfig } from '../config/env.js';
 import {
   colors,
   colorStatus,
-  colorPValue,
   colorImprovement,
   formatTestTable,
   formatStatusDetail,
@@ -38,7 +44,130 @@ function today(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+/**
+ * Cerca test per ID esatto o parziale. Restituisce il test o null.
+ * Se ci sono più candidati con ID parziale, li stampa e restituisce null.
+ */
+function findTestById(id: string) {
+  // Cerca per ID esatto
+  const exact = db.select().from(tests).where(eq(tests.id, id)).get();
+  if (exact) return exact;
+
+  // Prova con ID parziale
+  const candidates = db.select().from(tests).where(like(tests.id, `${id}%`)).all();
+
+  if (candidates.length === 1) return candidates[0];
+
+  if (candidates.length > 1) {
+    console.log(colors.uncertain(`  Trovati ${candidates.length} test con ID che inizia per "${id}":`));
+    for (const c of candidates) {
+      console.log(`    ${colors.muted(c.id.substring(0, 8))} ${c.name}`);
+    }
+    return null;
+  }
+
+  console.log(colors.error(`  Test "${id}" non trovato.`));
+  return null;
+}
+
 // --- Commands ---
+
+/**
+ * login — Collega l'account Google per accedere a Google Search Console
+ */
+export async function loginCommand(): Promise<void> {
+  console.log('');
+  console.log(colors.header('  Login Google Search Console'));
+  console.log(colors.muted('  ' + '\u2500'.repeat(40)));
+  console.log('');
+
+  try {
+    const oauthConfig = getGoogleOAuthConfig();
+    const oauthService = new GoogleOAuthService({
+      clientId: oauthConfig.clientId,
+      clientSecret: oauthConfig.clientSecret,
+      redirectUri: oauthConfig.redirectUri,
+    });
+
+    // Genera URL di autenticazione
+    const authUrl = oauthService.getAuthorizationUrl(oauthConfig.scopes);
+
+    console.log(colors.info('  \uD83D\uDD10 Per collegare il tuo account Google, apri questo URL nel browser:'));
+    console.log('');
+    console.log(`  ${chalk.underline(authUrl)}`);
+    console.log('');
+    console.log(colors.muted('  Dopo il login, Google ti mostrerà un Codice di Autorizzazione.'));
+    console.log(colors.muted('  Copialo e incollalo qui sotto.'));
+    console.log('');
+
+    // Chiedi il codice di autorizzazione
+    const { code } = await inquirer.prompt([{
+      type: 'input',
+      name: 'code',
+      message: 'Incolla il Codice di Autorizzazione:',
+      validate: (input: string) => input.trim().length > 0 || 'Il codice è obbligatorio.',
+    }]);
+
+    console.log('');
+    console.log(colors.muted('  Scambio codice in corso...'));
+
+    // Scambia il codice per i token
+    const tokenResponse = await oauthService.exchangeCodeForTokens(code.trim());
+
+    // Determina userId
+    const userId = process.env['USER_ID'] || 'default-user';
+
+    // Assicurati che l'utente esista
+    const existingUser = db.select().from(users).where(eq(users.id, userId)).get();
+    if (!existingUser) {
+      db.insert(users).values({ id: userId, email: `${userId}@seo-tool.local` }).run();
+    }
+
+    // Salva (o aggiorna) i token nel database
+    const expiresAt = Date.now() + tokenResponse.expires_in * 1000;
+    const existing = db.select().from(oauthTokens).where(eq(oauthTokens.userId, userId)).get();
+
+    if (existing) {
+      db.update(oauthTokens)
+        .set({
+          accessToken: tokenResponse.access_token,
+          refreshToken: tokenResponse.refresh_token,
+          expiresAt,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(oauthTokens.userId, userId))
+        .run();
+    } else {
+      db.insert(oauthTokens).values({
+        userId,
+        accessToken: tokenResponse.access_token,
+        refreshToken: tokenResponse.refresh_token,
+        expiresAt,
+      }).run();
+    }
+
+    // Registra nell'audit log
+    db.insert(auditLogs).values({
+      testId: 'system',
+      action: 'user_login',
+      userId,
+    }).run();
+
+    console.log('');
+    console.log(colors.success('  \u2705 Login effettuato! Ora puoi lanciare \'seo-tool run\' per scaricare i dati.'));
+    console.log('');
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('Google OAuth credentials not configured')) {
+      console.log(colors.error('  Credenziali Google non configurate.'));
+      console.log(colors.muted('  Crea un file .env con GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET.'));
+      console.log(colors.muted('  Vedi .env.example per un esempio.'));
+    } else {
+      console.log(colors.error(`  Errore: ${msg}`));
+    }
+    console.log('');
+  }
+}
 
 /**
  * add — Crea un nuovo test SEO con prompt interattivi
@@ -46,7 +175,7 @@ function today(): string {
 export async function addCommand(): Promise<void> {
   console.log('');
   console.log(colors.header('  Nuovo Test SEO'));
-  console.log(colors.muted('  ' + '─'.repeat(40)));
+  console.log(colors.muted('  ' + '\u2500'.repeat(40)));
   console.log('');
 
   try {
@@ -82,25 +211,21 @@ export async function addCommand(): Promise<void> {
     }
 
     // Verifica che l'utente esista, altrimenti crealo
-    const existingUser = await (prisma as any).user.findUnique({ where: { id: userId } });
+    const existingUser = db.select().from(users).where(eq(users.id, userId)).get();
     if (!existingUser) {
-      await (prisma as any).user.create({
-        data: { id: userId, email: `${userId}@seo-tool.local` },
-      });
+      db.insert(users).values({ id: userId, email: `${userId}@seo-tool.local` }).run();
     }
 
     // Crea il test
-    const test = await (prisma as any).test.create({
-      data: {
-        name,
-        siteUrl,
-        urls,
-        startDate,
-        splitDate,
-        status: 'running',
-        userId,
-      },
-    });
+    const test = db.insert(tests).values({
+      name,
+      siteUrl,
+      urls: JSON.stringify(urls),
+      startDate: startDate.toISOString(),
+      splitDate: splitDate.toISOString(),
+      status: 'running',
+      userId,
+    }).returning().get();
 
     console.log('');
     console.log(colors.success(`  Test creato con successo!`));
@@ -116,21 +241,19 @@ export async function addCommand(): Promise<void> {
  */
 export async function listCommand(): Promise<void> {
   try {
-    const tests = await (prisma as any).test.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
+    const allTests = db.select().from(tests).orderBy(desc(tests.createdAt)).all();
 
     console.log('');
 
-    if (tests.length === 0) {
+    if (allTests.length === 0) {
       console.log(colors.muted('  Nessun test trovato. Usa "seo-tool add" per crearne uno.'));
       console.log('');
       return;
     }
 
-    console.log(colors.header(`  ${tests.length} test trovati`));
+    console.log(colors.header(`  ${allTests.length} test trovati`));
     console.log('');
-    console.log(formatTestTable(tests));
+    console.log(formatTestTable(allTests));
     console.log('');
   } catch (error) {
     console.error(colors.error(`  Errore: ${error instanceof Error ? error.message : error}`));
@@ -142,41 +265,25 @@ export async function listCommand(): Promise<void> {
  */
 export async function statusCommand(id: string): Promise<void> {
   try {
-    // Cerca per ID esatto o parziale
-    let test = await (prisma as any).test.findUnique({
-      where: { id },
-      include: { metrics: { orderBy: { date: 'asc' } } },
-    });
+    const test = findTestById(id);
+    if (!test) return;
 
-    // Se non trovato, prova con ID parziale
-    if (!test) {
-      const candidates = await (prisma as any).test.findMany({
-        where: { id: { startsWith: id } },
-        include: { metrics: { orderBy: { date: 'asc' } } },
-      });
-
-      if (candidates.length === 1) {
-        test = candidates[0];
-      } else if (candidates.length > 1) {
-        console.log(colors.uncertain(`  Trovati ${candidates.length} test con ID che inizia per "${id}":`));
-        for (const c of candidates) {
-          console.log(`    ${colors.muted(c.id.substring(0, 8))} ${c.name}`);
-        }
-        return;
-      } else {
-        console.log(colors.error(`  Test "${id}" non trovato.`));
-        return;
-      }
-    }
+    // Carica metriche ordinate per data
+    const testMetrics = db
+      .select()
+      .from(metrics)
+      .where(eq(metrics.testId, test.id))
+      .orderBy(metrics.date)
+      .all();
 
     // Dividi metriche before/after
-    const splitTime = test.splitDate.getTime();
-    const beforeClicks = test.metrics
-      .filter((m: any) => m.date.getTime() < splitTime)
-      .map((m: any) => m.clicks);
-    const afterClicks = test.metrics
-      .filter((m: any) => m.date.getTime() >= splitTime)
-      .map((m: any) => m.clicks);
+    const splitDateStr = test.splitDate;
+    const beforeClicks = testMetrics
+      .filter((m) => m.date < splitDateStr)
+      .map((m) => m.clicks);
+    const afterClicks = testMetrics
+      .filter((m) => m.date >= splitDateStr)
+      .map((m) => m.clicks);
 
     // Analisi statistica
     const engine = new StatisticalEngine();
@@ -186,15 +293,31 @@ export async function statusCommand(id: string): Promise<void> {
     });
 
     // Attacca dati per il formatter
-    test._beforeClicks = beforeClicks;
-    test._afterClicks = afterClicks;
+    const testView = {
+      ...test,
+      metrics: testMetrics,
+      _beforeClicks: beforeClicks,
+      _afterClicks: afterClicks,
+    };
 
     // Stampa dettaglio
-    console.log(formatStatusDetail(test, analysis));
+    console.log(formatStatusDetail(testView, analysis));
 
     // Grafico ASCII
-    if (test.metrics.length > 0) {
-      console.log(renderClicksChart(test.metrics, test.splitDate));
+    if (testMetrics.length > 0) {
+      console.log(renderClicksChart(testMetrics, new Date(test.splitDate)));
+
+      // Bonus: proponi export
+      const { wantExport } = await inquirer.prompt([{
+        type: 'confirm',
+        name: 'wantExport',
+        message: 'Vuoi esportare questi dati ora?',
+        default: false,
+      }]);
+
+      if (wantExport) {
+        await exportCommand(test.id);
+      }
     }
   } catch (error) {
     console.error(colors.error(`  Errore: ${error instanceof Error ? error.message : error}`));
@@ -207,13 +330,38 @@ export async function statusCommand(id: string): Promise<void> {
 export async function runCommand(): Promise<void> {
   console.log('');
   console.log(colors.header('  Sincronizzazione Test Attivi'));
-  console.log(colors.muted('  ' + '─'.repeat(40)));
+  console.log(colors.muted('  ' + '\u2500'.repeat(40)));
   console.log('');
   console.log(colors.info('  Avvio sincronizzazione...'));
   console.log('');
 
   try {
-    const orchestrator = new SEOExperimentOrchestrator();
+    // Carica config OAuth e token dal database
+    const oauthConfig = getGoogleOAuthConfig();
+    const tokenManager = new TokenManager({
+      clientId: oauthConfig.clientId,
+      clientSecret: oauthConfig.clientSecret,
+    });
+
+    // Popola il TokenManager con i token salvati nel DB
+    const savedTokens = db.select().from(oauthTokens).all();
+    if (savedTokens.length === 0) {
+      console.log(colors.error('  Nessun account Google collegato.'));
+      console.log(colors.muted('  Esegui prima "seo-tool login" per autenticarti.'));
+      console.log('');
+      return;
+    }
+    for (const t of savedTokens) {
+      const remainingSeconds = Math.max(0, Math.floor((t.expiresAt - Date.now()) / 1000));
+      await tokenManager.saveTokens(t.userId, {
+        access_token: t.accessToken,
+        refresh_token: t.refreshToken,
+        expires_in: remainingSeconds,
+        token_type: 'Bearer',
+      });
+    }
+
+    const orchestrator = new SEOExperimentOrchestrator({ tokenManager });
     const result = await orchestrator.syncAllActiveTests();
 
     if (result.totalTests === 0) {
@@ -224,25 +372,25 @@ export async function runCommand(): Promise<void> {
 
     // Risultati per ogni test
     for (const r of result.results) {
-      const icon = r.isSignificant ? chalk.green('✓') : chalk.yellow('○');
+      const icon = r.isSignificant ? chalk.green('\u2714') : chalk.yellow('\u25CB');
       const pStr = r.pValue !== null ? `p=${r.pValue.toFixed(4)}` : '';
       const changeStr = colorImprovement(r.percentageChange);
       console.log(`  ${icon} ${colors.muted(r.testId.substring(0, 8))} ${changeStr} ${colors.muted(pStr)}`);
 
       if (r.notificationSent) {
-        console.log(`    ${colors.info('→ Notifica inviata')}`);
+        console.log(`    ${colors.info('\u2190 Notifica inviata')}`);
       }
     }
 
     // Errori
     for (const err of result.errors) {
-      console.log(`  ${chalk.red('✗')} ${colors.muted(err.testId.substring(0, 8))} ${colors.error(err.error)}`);
+      console.log(`  ${chalk.red('\u2717')} ${colors.muted(err.testId.substring(0, 8))} ${colors.error(err.error)}`);
     }
 
     // Riepilogo
     console.log('');
-    console.log(colors.muted('  ' + '─'.repeat(40)));
-    console.log(`  ${colors.success(`${result.successCount} completati`)} · ${result.errorCount > 0 ? colors.error(`${result.errorCount} errori`) : colors.muted('0 errori')}`);
+    console.log(colors.muted('  ' + '\u2500'.repeat(40)));
+    console.log(`  ${colors.success(`${result.successCount} completati`)} \u00B7 ${result.errorCount > 0 ? colors.error(`${result.errorCount} errori`) : colors.muted('0 errori')}`);
     console.log('');
   } catch (error) {
     console.error(colors.error(`  Errore fatale: ${error instanceof Error ? error.message : error}`));
@@ -250,61 +398,82 @@ export async function runCommand(): Promise<void> {
 }
 
 /**
- * export <id> — Esporta dati test su file CSV
+ * export <id> — Esporta dati test su file Excel o CSV (con scelta interattiva)
  */
-export async function exportCommand(id: string, options: { format: string }): Promise<void> {
+export async function exportCommand(id: string, options?: { format?: string }): Promise<void> {
   try {
-    // Cerca test (supporta ID parziale)
-    let test = await (prisma as any).test.findUnique({
-      where: { id },
-      include: { metrics: { orderBy: { date: 'asc' } } },
-    });
+    const test = findTestById(id);
+    if (!test) return;
 
-    if (!test) {
-      const candidates = await (prisma as any).test.findMany({
-        where: { id: { startsWith: id } },
-        include: { metrics: { orderBy: { date: 'asc' } } },
-      });
-      if (candidates.length === 1) test = candidates[0];
-      else {
-        console.log(colors.error(`  Test "${id}" non trovato.`));
-        return;
-      }
-    }
+    const testMetrics = db
+      .select()
+      .from(metrics)
+      .where(eq(metrics.testId, test.id))
+      .orderBy(metrics.date)
+      .all();
 
-    if (test.metrics.length === 0) {
-      console.log(colors.uncertain('  Nessuna metrica da esportare per questo test.'));
+    if (testMetrics.length === 0) {
+      console.log('');
+      console.log(colors.uncertain('  ⚠ Nessuna metrica disponibile per questo test.'));
+      console.log(colors.muted('  Esegui prima "seo-tool run" per raccogliere dati da GSC.'));
+      console.log('');
       return;
     }
 
-    const format = options.format || 'csv';
-
-    if (format === 'csv') {
-      const exportService = new ExportService();
-      const rows = test.metrics.map((m: any) => ({
-        date: m.date.toISOString().split('T')[0],
-        clicks: m.clicks,
-        impressions: m.impressions,
-        gapFilled: m.gapFilled ? 'yes' : 'no',
-      }));
-
-      const csv = await exportService.exportToCSV(rows);
-
-      // Nome file: NomeTest_2024-01-15.csv
-      const safeName = test.name.replace(/[^a-zA-Z0-9_-]/g, '_');
-      const fileName = `${safeName}_${today()}.csv`;
-
-      await writeFile(fileName, csv, 'utf-8');
-
-      console.log('');
-      console.log(colors.success(`  Export completato!`));
-      console.log(`  ${colors.muted('File:')}   ${fileName}`);
-      console.log(`  ${colors.muted('Righe:')}  ${rows.length}`);
-      console.log(`  ${colors.muted('Format:')} ${format.toUpperCase()}`);
-      console.log('');
-    } else {
-      console.log(colors.error(`  Formato "${format}" non supportato. Usa --format=csv`));
+    // Scelta formato: flag CLI oppure prompt interattivo
+    let format = options?.format;
+    if (!format) {
+      const answer = await inquirer.prompt([{
+        type: 'list',
+        name: 'format',
+        message: 'In quale formato vuoi esportare?',
+        choices: [
+          { name: 'Excel (.xlsx) — Report completo con grafici e formattazione', value: 'xlsx' },
+          { name: 'CSV (.csv) — Dati piatti per import in altri tool', value: 'csv' },
+        ],
+      }]);
+      format = answer.format;
     }
+
+    // Prepara input per ExportService
+    const metricRows: MetricRow[] = testMetrics.map((m) => ({
+      date: m.date,
+      clicks: m.clicks,
+      impressions: m.impressions,
+      gapFilled: m.gapFilled ?? false,
+    }));
+
+    const exportInput: ExportInput = {
+      test: {
+        id: test.id,
+        name: test.name,
+        siteUrl: test.siteUrl,
+        urls: JSON.parse(test.urls) as string[],
+        startDate: test.startDate,
+        splitDate: test.splitDate,
+        status: test.status,
+        lastPValue: test.lastPValue,
+        lastImprovement: test.lastImprovement,
+      },
+      metrics: metricRows,
+    };
+
+    const exportService = new ReportExportService();
+
+    const result = format === 'xlsx'
+      ? await exportService.exportToExcel(exportInput)
+      : await exportService.exportToCSV(exportInput);
+
+    // Scrivi il file nella cartella corrente
+    const filePath = path.resolve(result.fileName);
+    await writeFile(filePath, result.buffer);
+
+    console.log('');
+    console.log(colors.success('  Export completato!'));
+    console.log(`  ${colors.muted('File:')}     ${filePath}`);
+    console.log(`  ${colors.muted('Formato:')}  ${result.format.toUpperCase()}`);
+    console.log(`  ${colors.muted('Metriche:')} ${result.rowCount} giorni`);
+    console.log('');
   } catch (error) {
     console.error(colors.error(`  Errore: ${error instanceof Error ? error.message : error}`));
   }
@@ -315,35 +484,21 @@ export async function exportCommand(id: string, options: { format: string }): Pr
  */
 export async function deleteCommand(id: string): Promise<void> {
   try {
-    // Cerca test (supporta ID parziale)
-    let test = await (prisma as any).test.findUnique({ where: { id } });
-
-    if (!test) {
-      const candidates = await (prisma as any).test.findMany({
-        where: { id: { startsWith: id } },
-      });
-
-      if (candidates.length === 1) {
-        test = candidates[0];
-      } else if (candidates.length > 1) {
-        console.log(colors.uncertain(`  Trovati ${candidates.length} test con ID che inizia per "${id}":`));
-        for (const c of candidates) {
-          console.log(`    ${colors.muted(c.id.substring(0, 8))} ${c.name}`);
-        }
-        return;
-      } else {
-        console.log(colors.error(`  Test "${id}" non trovato.`));
-        return;
-      }
-    }
+    const test = findTestById(id);
+    if (!test) return;
 
     // Conta metriche collegate
-    const metricsCount = await (prisma as any).metric.count({ where: { testId: test.id } });
+    const metricsResult = db
+      .select({ total: count() })
+      .from(metrics)
+      .where(eq(metrics.testId, test.id))
+      .get();
+    const metricsCount = metricsResult?.total ?? 0;
 
     // Mostra info e chiedi conferma
     console.log('');
     console.log(colors.header('  Eliminazione Test'));
-    console.log(colors.muted('  ' + '─'.repeat(40)));
+    console.log(colors.muted('  ' + '\u2500'.repeat(40)));
     console.log(`  ${colors.muted('Nome:')}     ${test.name}`);
     console.log(`  ${colors.muted('ID:')}       ${test.id}`);
     console.log(`  ${colors.muted('Stato:')}    ${colorStatus(test.status)}`);
@@ -359,17 +514,15 @@ export async function deleteCommand(id: string): Promise<void> {
       return;
     }
 
-    // Elimina il test (le metriche vengono eliminate via onDelete: Cascade)
-    await (prisma as any).test.delete({ where: { id: test.id } });
+    // Elimina il test (le metriche vengono eliminate via ON DELETE CASCADE)
+    db.delete(tests).where(eq(tests.id, test.id)).run();
 
     // Registra nell'Audit Log
-    await (prisma as any).auditLog.create({
-      data: {
-        testId: test.id,
-        action: 'test_deleted',
-        userId: test.userId,
-      },
-    });
+    db.insert(auditLogs).values({
+      testId: test.id,
+      action: 'test_deleted',
+      userId: test.userId,
+    }).run();
 
     console.log('');
     console.log(colors.success(`  Test "${test.name}" eliminato con successo.`));

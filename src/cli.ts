@@ -4,19 +4,22 @@
  * SEO Testing Tool — CLI
  *
  * Interfaccia a riga di comando per gestire esperimenti SEO:
- *   seo-tool add          Crea un nuovo test
- *   seo-tool list         Mostra tutti i test
- *   seo-tool status <id>  Dettaglio test con grafico
- *   seo-tool run          Sincronizza test attivi
- *   seo-tool export <id>  Esporta dati in CSV
- *   seo-tool delete <id>  Elimina un test
+ *   seo-tool login         Collega account Google
+ *   seo-tool add           Crea un nuovo test
+ *   seo-tool list          Mostra tutti i test
+ *   seo-tool status <id>   Dettaglio test con grafico
+ *   seo-tool run           Sincronizza test attivi
+ *   seo-tool export <id>   Esporta dati in CSV
+ *   seo-tool delete <id>   Elimina un test
  */
 
 import { config } from 'dotenv';
 config();
 
 import { Command } from 'commander';
+import { migrateDB } from './database/db.js';
 import {
+  loginCommand,
   addCommand,
   listCommand,
   statusCommand,
@@ -25,12 +28,20 @@ import {
   deleteCommand,
 } from './cli/commands.js';
 
+// Auto-setup: crea DB e tabelle al primo avvio
+migrateDB();
+
 const program = new Command();
 
 program
   .name('seo-tool')
   .description('SEO Testing Tool — Analisi statistica per esperimenti SEO')
   .version('1.0.0');
+
+program
+  .command('login')
+  .description('Collega il tuo account Google per accedere a Search Console')
+  .action(loginCommand);
 
 program
   .command('add')
@@ -56,8 +67,8 @@ program
 program
   .command('export')
   .argument('<id>', 'ID del test (anche parziale)')
-  .option('--format <fmt>', 'Formato export (csv)', 'csv')
-  .description('Esporta dati test su file')
+  .option('--format <fmt>', 'Formato export: xlsx o csv (interattivo se omesso)')
+  .description('Esporta dati test su file Excel o CSV')
   .action(exportCommand);
 
 program

@@ -44,7 +44,7 @@
 
 ```json
 {
-  "access_token": "ya29.a0AUMWg_KlCQepbXtjJGe498t...",
+  "access_token": "ya29.a0AUMWg_K.....",
   "expires_in": 3599,
   "token_type": "Bearer"
 }

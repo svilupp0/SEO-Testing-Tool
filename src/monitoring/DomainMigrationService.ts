@@ -192,7 +192,7 @@ export class DomainMigrationService {
   /**
    * Test 7.2 - Invia alert migrazione
    */
-  async sendMigrationAlert(testId: string, detection: MigrationDetection): Promise<boolean> {
+  async sendMigrationAlert(_testId: string, detection: MigrationDetection): Promise<boolean> {
     if (!detection.hasMigration) {
       return false;
     }
@@ -287,7 +287,7 @@ export class DomainMigrationService {
    * Test 7.2 - Rileva migrazione tra proprietà
    */
   async detectMigration(
-    userId: string,
+    _userId: string,
     oldProperty: string,
     newProperty: string,
     testsOldProperty: any[],
@@ -326,7 +326,7 @@ export class DomainMigrationService {
    * Test 7.2 - Unisce proprietà
    */
   async mergeProperties(
-    userId: string,
+    _userId: string,
     oldProperty: string,
     newProperty: string,
     testsToMerge: any[],

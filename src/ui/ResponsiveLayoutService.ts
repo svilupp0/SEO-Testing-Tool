@@ -148,7 +148,7 @@ export class ResponsiveLayoutService {
    * Test 8.2 - Render per device specifico
    */
   async renderForDevice(
-    content: { type: string; charts?: number; tables?: number; dataPoints?: number },
+    _content: { type: string; charts?: number; tables?: number; dataPoints?: number },
     deviceName: string
   ): Promise<DeviceLayout> {
     // Simula rendering per device

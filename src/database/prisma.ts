@@ -1,22 +1,37 @@
 import { PrismaClient } from '../generated/prisma/client.js';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pg from 'pg';
+import { PrismaLibSql } from '@prisma/adapter-libsql';
+import { createClient } from '@libsql/client';
+import { mkdirSync } from 'fs';
+import { homedir } from 'os';
+import { join, dirname } from 'path';
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-/**
- * Crea PrismaClient con driver adapter pg (richiesto da Prisma v7 prisma-client provider).
- */
+function getDbUrl(): string {
+  // Forza l'uso del file locale per lo sviluppo se non specificato
+  const defaultDbPath = join(homedir(), '.seo-tool', 'data.db');
+  let dbUrl = process.env['DATABASE_URL'] || `file:${defaultDbPath}`;
+
+  if (dbUrl.startsWith('file:')) {
+    const filePath = dbUrl.replace('file:', '');
+    mkdirSync(dirname(filePath), { recursive: true });
+  }
+  return dbUrl;
+}
+
 function createPrismaClient(): PrismaClient {
-  const pool = new pg.Pool({ connectionString: process.env['DATABASE_URL'] });
-  const adapter = new PrismaPg(pool);
+  const url = getDbUrl();
+  // Necessario per Prisma v7: l'URL deve essere presente nell'env
+  // perché l'engine WASM lo cerca anche se si usa un adapter
+  process.env['DATABASE_URL'] = url;
+
+  const client = createClient({ url });
+  const adapter = new PrismaLibSql(client);
+
+  // In Prisma v7 con provider "prisma-client", l'adapter è obbligatorio
   return new PrismaClient({ adapter }) as unknown as PrismaClient;
 }
 
-/**
- * Lazy singleton: PrismaClient viene creato solo al primo accesso,
- * evitando crash durante i test che iniettano un mock nel constructor.
- */
 export function getPrisma(): PrismaClient {
   if (!globalForPrisma.prisma) {
     globalForPrisma.prisma = createPrismaClient();
@@ -24,10 +39,10 @@ export function getPrisma(): PrismaClient {
   return globalForPrisma.prisma;
 }
 
-// Mantenuto per backward-compatibility come proxy lazy
 export const prisma = new Proxy({} as PrismaClient, {
   get(_target, prop) {
-    return (getPrisma() as any)[prop];
+    const p = getPrisma();
+    return (p as any)[prop];
   },
 });
 

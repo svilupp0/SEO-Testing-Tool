@@ -1,6 +1,6 @@
 # SEO Testing Tool v1.0.0
 
-Strumento CLI per esperimenti SEO con analisi statistica (Welch's t-test), integrazione Google Search Console e deploy automatico su Railway.
+Strumento CLI per esperimenti SEO con analisi statistica (Welch's t-test), integrazione Google Search Console. Database SQLite locale (zero configurazione).
 
 ## Visione
 
@@ -12,8 +12,9 @@ Il tool non promette certezze, ma supporta decisioni informate attraverso analis
 ## Prerequisiti
 
 - Node.js >= 18
-- PostgreSQL (locale o [Railway](https://railway.app))
 - Credenziali OAuth2 Google (per integrazione GSC)
+
+> Il database SQLite viene creato automaticamente in `~/.seo-tool/data.db` al primo avvio. Non serve installare nulla.
 
 ## Installazione
 
@@ -33,7 +34,8 @@ cp .env.example .env
 ### Variabili d'ambiente (.env)
 
 ```env
-DATABASE_URL=postgresql://user:password@host:port/dbname
+# Opzionale: default ~/.seo-tool/data.db
+# DATABASE_URL=file:/percorso/personalizzato/data.db
 GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=xxx
 GOOGLE_REDIRECT_URI=http://localhost:3000/auth/callback
@@ -46,7 +48,7 @@ USER_ID=default-user
 # Genera Prisma Client
 npm run db:generate
 
-# Applica schema al database
+# Crea le tabelle nel database SQLite
 npm run db:push
 ```
 
@@ -59,10 +61,7 @@ npm run smoke-test
 ## Installazione come comando globale
 
 ```bash
-# Compila TypeScript
-npm run build
-
-# Registra il comando globale
+# Registra il comando globale (non serve compilare)
 npm link
 
 # Ora puoi usare il tool da qualsiasi directory
@@ -132,17 +131,16 @@ npm run lint
 npm run format
 ```
 
-## Deploy su Railway
+## Deploy su Railway (opzionale)
 
-Il progetto include configurazione pronta per Railway con cron job notturno.
+Il progetto include configurazione per Railway con cron job notturno e database SQLite embedded.
 
 ### Setup Railway
 
 1. Crea un nuovo progetto su [Railway](https://railway.app)
-2. Aggiungi un servizio PostgreSQL
-3. Collega il repository Git
-4. Railway rileverà automaticamente `railway.json` e `Dockerfile`
-5. Configura le variabili d'ambiente nel pannello Railway (`DATABASE_URL`, credenziali Google, ecc.)
+2. Collega il repository Git
+3. Railway rileverà automaticamente `railway.json` e `Dockerfile`
+4. Configura le variabili d'ambiente nel pannello Railway (credenziali Google, ecc.)
 
 ### Cron Job
 
@@ -180,7 +178,7 @@ src/
     AnalysisConfig.ts             Soglie configurabili
     env.ts                        Config OAuth2
   database/
-    prisma.ts                     Singleton lazy Prisma (driver adapter pg)
+    prisma.ts                     Singleton lazy Prisma (SQLite)
     DatabaseService.ts            CRUD, transazioni, aggregati, paginazione
     TimeSeriesService.ts          Gap detection, recovery
   orchestrator/

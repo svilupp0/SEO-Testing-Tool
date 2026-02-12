@@ -74,13 +74,6 @@ export class GSCDataFetcher {
     this.retryWarnings = [];
   }
 
-  private getRetryInfo(): { retriesPerformed: number; warnings: Array<{ type: string; message?: string; startRow?: number }> } {
-    return {
-      retriesPerformed: this.retryCount,
-      warnings: this.retryWarnings
-    };
-  }
-
   /**
    * Metodo interno per fare richieste alle API Google Search Console
    */

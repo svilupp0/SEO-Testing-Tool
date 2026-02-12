@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TokenManager - Gestione dei token OAuth2 e refresh automatico
  */
 
@@ -76,7 +76,7 @@ export class TokenManager {
   }
 
   async refreshAccessToken(userIdOrToken: string): Promise<TokenResponse> {
-    // Se è un userId, recupera il token
+    // Se Ã¨ un userId, recupera il token
     let refreshToken: string;
     let userId: string | null = null;
     
@@ -87,7 +87,7 @@ export class TokenManager {
         throw new Error('No token found');
       }
       
-      // Controlla se è già revocato
+      // Controlla se Ã¨ giÃ  revocato
       if (this.revokedTokens.has(userId)) {
         throw new Error('Accesso revocato. Riconnetti il tuo account Google.');
       }
@@ -117,15 +117,15 @@ export class TokenManager {
           throw new Error('Errore del server Google');
         }
         
-        // Prova a parsare il JSON solo se non è un errore 500
+        // Prova a parsare il JSON solo se non Ã¨ un errore 500
         let data: { error?: string } = {};
         try {
           data = await response.json() as { error?: string };
         } catch {
-          // Se non è JSON valido, continua con i controlli di status
+          // Se non Ã¨ JSON valido, continua con i controlli di status
         }
         
-        // Controlla se è un errore di revoca
+        // Controlla se Ã¨ un errore di revoca
         if (data.error === 'invalid_grant') {
           if (userId) {
             this.revokedTokens.set(userId, new Date());
@@ -182,7 +182,7 @@ export class TokenManager {
   async getValidAccessToken(userId: string): Promise<ValidTokenResult>;
   async getValidAccessToken(userId?: string): Promise<string | ValidTokenResult> {
     if (userId) {
-      // Controlla se è revocato
+      // Controlla se Ã¨ revocato
       if (this.revokedTokens.has(userId)) {
         return {
           success: false,
@@ -227,7 +227,7 @@ export class TokenManager {
     return this.currentToken.access_token;
   }
 
-  async validateAccessToken(accessToken: string): Promise<ValidationResult> {
+  async validateAccessToken(_accessToken: string): Promise<ValidationResult> {
     // Simula validazione - ritorna revocato per token non autorizzati
     return {
       isValid: false,

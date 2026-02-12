@@ -10,8 +10,9 @@
  * - Audit logging per tracciabilità
  */
 
-import type { PrismaClient } from '../generated/prisma/client.js';
-import { prisma as defaultPrisma } from '../database/prisma.js';
+import { eq } from 'drizzle-orm';
+import { db as defaultDb, type DrizzleDB } from '../database/db.js';
+import { tests, metrics, auditLogs, users } from '../database/schema.js';
 import { GSCDataFetcher } from '../gsc/GSCDataFetcher.js';
 import { StatisticalEngine } from '../stats/StatisticalEngine.js';
 import { TimeSeriesService } from '../database/TimeSeriesService.js';
@@ -39,7 +40,7 @@ export interface SyncResult {
 }
 
 export interface OrchestratorDeps {
-  prisma?: PrismaClient;
+  db?: DrizzleDB;
   gscFetcher?: GSCDataFetcher;
   statisticalEngine?: StatisticalEngine;
   timeSeriesService?: TimeSeriesService;
@@ -48,7 +49,7 @@ export interface OrchestratorDeps {
 }
 
 export class SEOExperimentOrchestrator {
-  private prisma: PrismaClient;
+  private db: DrizzleDB;
   private gscFetcher: GSCDataFetcher;
   private statisticalEngine: StatisticalEngine;
   private timeSeriesService: TimeSeriesService;
@@ -56,10 +57,10 @@ export class SEOExperimentOrchestrator {
   private tokenManager: TokenManager;
 
   constructor(deps?: OrchestratorDeps) {
-    this.prisma = (deps?.prisma ?? defaultPrisma) as PrismaClient;
+    this.db = deps?.db ?? defaultDb;
     this.gscFetcher = deps?.gscFetcher ?? new GSCDataFetcher();
     this.statisticalEngine = deps?.statisticalEngine ?? new StatisticalEngine();
-    this.timeSeriesService = deps?.timeSeriesService ?? new TimeSeriesService(deps?.prisma);
+    this.timeSeriesService = deps?.timeSeriesService ?? new TimeSeriesService(deps?.db);
     this.notificationService = deps?.notificationService ?? new NotificationService();
     this.tokenManager = deps?.tokenManager ?? new TokenManager({ clientId: '', clientSecret: '' });
   }
@@ -69,10 +70,11 @@ export class SEOExperimentOrchestrator {
    */
   async runExperiment(testId: string): Promise<ExperimentResult> {
     // 1. Carica test dal database
-    const test = await (this.prisma as any).test.findUnique({
-      where: { id: testId },
-      include: { metrics: { orderBy: { date: 'asc' } }, user: true },
-    });
+    const test = this.db
+      .select()
+      .from(tests)
+      .where(eq(tests.id, testId))
+      .get();
 
     if (!test) {
       throw new Error(`Test ${testId} non trovato.`);
@@ -81,6 +83,13 @@ export class SEOExperimentOrchestrator {
     if (test.status !== 'running') {
       throw new Error(`Test ${testId} non è in esecuzione (stato: ${test.status}).`);
     }
+
+    // Carica user per email notifica
+    const user = this.db
+      .select()
+      .from(users)
+      .where(eq(users.id, test.userId))
+      .get();
 
     // 2. Ottieni access token
     const tokenResult = await this.tokenManager.getValidAccessToken(test.userId);
@@ -91,7 +100,7 @@ export class SEOExperimentOrchestrator {
 
     // 3. Fetch nuovi dati da GSC
     const today = new Date().toISOString().split('T')[0];
-    const startDateStr = test.startDate.toISOString().split('T')[0];
+    const startDateStr = test.startDate.split('T')[0];
 
     const gscData = await this.gscFetcher.fetchSearchAnalytics(
       tokenResult.token,
@@ -110,18 +119,20 @@ export class SEOExperimentOrchestrator {
     }
 
     // 5. Ricarica tutte le metriche dal database (incluse le nuove)
-    const allMetrics = await (this.prisma as any).metric.findMany({
-      where: { testId },
-      orderBy: { date: 'asc' },
-    });
+    const allMetrics = this.db
+      .select()
+      .from(metrics)
+      .where(eq(metrics.testId, testId))
+      .orderBy(metrics.date)
+      .all();
 
     // 6. Dividi metriche in before/after alla splitDate
-    const splitTime = test.splitDate.getTime();
-    const beforeMetrics = allMetrics.filter((m: any) => m.date.getTime() < splitTime);
-    const afterMetrics = allMetrics.filter((m: any) => m.date.getTime() >= splitTime);
+    const splitDateStr = test.splitDate;
+    const beforeMetrics = allMetrics.filter((m) => m.date < splitDateStr);
+    const afterMetrics = allMetrics.filter((m) => m.date >= splitDateStr);
 
-    const beforeClicks = beforeMetrics.map((m: any) => m.clicks);
-    const afterClicks = afterMetrics.map((m: any) => m.clicks);
+    const beforeClicks = beforeMetrics.map((m) => m.clicks);
+    const afterClicks = afterMetrics.map((m) => m.clicks);
 
     // 7. Esegui analisi statistica
     const analysisResult = this.statisticalEngine.analyze({
@@ -133,28 +144,31 @@ export class SEOExperimentOrchestrator {
     const newStatus = analysisResult.isSignificant ? 'completed' : 'running';
 
     // 9. Aggiorna test nel database
-    await (this.prisma as any).test.update({
-      where: { id: testId },
-      data: {
-        lastSyncAt: new Date(),
+    this.db
+      .update(tests)
+      .set({
+        lastSyncAt: new Date().toISOString(),
         lastPValue: analysisResult.pValue,
         lastImprovement: analysisResult.percentageChange,
         status: newStatus,
-      },
-    });
+        updatedAt: new Date().toISOString(),
+      })
+      .where(eq(tests.id, testId))
+      .run();
 
     // 10. Registra nell'audit log
-    await (this.prisma as any).auditLog.create({
-      data: {
+    this.db
+      .insert(auditLogs)
+      .values({
         testId,
         action: 'experiment_synced',
         userId: test.userId,
-      },
-    });
+      })
+      .run();
 
     // 11. Gestisci notifiche (solo se significativo)
     let notificationSent = false;
-    if (analysisResult.isSignificant && test.user?.email) {
+    if (analysisResult.isSignificant && user?.email) {
       const testResult = {
         testId,
         testName: test.name,
@@ -163,7 +177,7 @@ export class SEOExperimentOrchestrator {
         confidenceLevel: 1 - analysisResult.pValue,
         metricType: 'clicks',
         userId: test.userId,
-        userEmail: test.user.email,
+        userEmail: user.email,
       };
 
       const sendResult = await this.notificationService.sendVictoryAlert(testResult);
@@ -193,9 +207,11 @@ export class SEOExperimentOrchestrator {
    * Resiliente: se un test fallisce, logga l'errore e continua.
    */
   async syncAllActiveTests(): Promise<SyncResult> {
-    const activeTests = await (this.prisma as any).test.findMany({
-      where: { status: 'running' },
-    });
+    const activeTests = this.db
+      .select()
+      .from(tests)
+      .where(eq(tests.status, 'running'))
+      .all();
 
     const results: ExperimentResult[] = [];
     const errors: Array<{ testId: string; error: string }> = [];
@@ -223,17 +239,19 @@ export class SEOExperimentOrchestrator {
    * Aggiorna lo stato di un test e registra nel log.
    */
   private async updateTestStatus(testId: string, status: string, userId: string): Promise<void> {
-    await (this.prisma as any).test.update({
-      where: { id: testId },
-      data: { status },
-    });
+    this.db
+      .update(tests)
+      .set({ status, updatedAt: new Date().toISOString() })
+      .where(eq(tests.id, testId))
+      .run();
 
-    await (this.prisma as any).auditLog.create({
-      data: {
+    this.db
+      .insert(auditLogs)
+      .values({
         testId,
         action: `status_changed_to_${status}`,
         userId,
-      },
-    });
+      })
+      .run();
   }
 }

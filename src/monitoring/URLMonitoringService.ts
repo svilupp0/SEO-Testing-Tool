@@ -124,7 +124,7 @@ export class URLMonitoringService {
    * Test 7.1 - Gestisce redirect (sospende per 301, continua per 302)
    */
   async handleRedirect(
-    testId: string,
+    _testId: string,
     originalUrl: string,
     redirectInfo: { hasRedirect: boolean; redirectTarget?: string; redirectType: number }
   ): Promise<{
@@ -161,7 +161,7 @@ export class URLMonitoringService {
    * Test 7.1 - Genera messaggio per utente su redirect
    */
   async generateRedirectMessage(
-    testId: string,
+    _testId: string,
     originalUrl: string,
     redirectInfo: { hasRedirect: boolean; redirectTarget?: string; redirectType: number }
   ): Promise<string> {
@@ -176,7 +176,7 @@ export class URLMonitoringService {
    * Test 7.1 - Migra test a nuovo URL (o termina se utente rifiuta)
    */
   async migrateTestToNewUrl(
-    testId: string,
+    _testId: string,
     originalUrl: string,
     newUrl: string,
     userAccepts: boolean
@@ -206,7 +206,7 @@ export class URLMonitoringService {
   /**
    * Test 7.1 - Suggerisce migrazione URL
    */
-  async suggestMigration(testId: string, oldUrl: string, newUrl: string): Promise<MigrationPlan> {
+  async suggestMigration(_testId: string, oldUrl: string, newUrl: string): Promise<MigrationPlan> {
     // Simula analisi impatto
     const affectedTests = 1;
     const dataLoss = 0;
@@ -263,7 +263,7 @@ export class URLMonitoringService {
   /**
    * Test 7.1 - Invia alert quando rileva redirect
    */
-  async sendRedirectAlert(testId: string, detection: RedirectDetection): Promise<boolean> {
+  async sendRedirectAlert(_testId: string, detection: RedirectDetection): Promise<boolean> {
     if (!this.alertConfig.enabled || !this.alertConfig.notifyOnRedirect) {
       return false;
     }
