@@ -9,10 +9,10 @@ build/
 coverage/
 .nyc_output/
 
-# Environment variables
+# Environment variables (SENSITIVE - mai committare!)
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
 # Google OAuth Credentials (SENSITIVE!)
 client_secret_*.json
@@ -51,5 +51,3 @@ yarn-error.log*
 *.db-journal
 *.sqlite
 *.sqlite3
-drizzle/meta/
-drizzle/*.sql

@@ -2,7 +2,7 @@
  * GSCDataFetcher - Fetch dati da Google Search Console
  */
 
-import { GSCPermissionService } from './GSCPermissionService';
+import { GSCPermissionService } from './GSCPermissionService.js';
 
 interface SearchAnalyticsParams {
   siteUrl: string;

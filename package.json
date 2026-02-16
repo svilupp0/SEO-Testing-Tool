@@ -4,14 +4,29 @@
   "description": "SEO Testing Tool - Statistical analysis for SEO experiments",
   "type": "module",
   "main": "dist/index.js",
-  "bin": {
-    "seo-tool": "./bin/seo-tool.mjs"
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
   },
+  "bin": {
+    "seo-tool": "./dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "drizzle/"
+  ],
   "scripts": {
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
+    "prebuild": "rimraf dist",
     "build": "tsc",
+    "postbuild": "node dist/cli.js --version",
+    "prepack": "npm run build",
+    "prepublishOnly": "vitest run && npm run test:e2e",
+    "dev:cli": "tsx src/cli.ts",
     "dev": "tsx watch src/index.ts",
     "lint": "eslint src tests --ext .ts",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
@@ -20,6 +35,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "cli:run": "tsx src/cli.ts run",
+    "test:e2e": "npm run build && vitest run tests/e2e",
     "smoke-test": "tsx src/smoke-test.ts",
     "demo": "tsx src/demo.ts"
   },
@@ -34,6 +50,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
+    "@types/inquirer": "^9.0.9",
     "@types/node": "^20.11.0",
     "@typescript-eslint/eslint-plugin": "^6.19.0",
     "@typescript-eslint/parser": "^6.19.0",
@@ -42,11 +59,12 @@
     "drizzle-kit": "^0.31.9",
     "eslint": "^8.56.0",
     "prettier": "^3.2.4",
+    "rimraf": "^6.1.3",
+    "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^1.2.0"
   },
   "dependencies": {
-    "@types/inquirer": "^9.0.9",
     "asciichart": "^1.5.25",
     "better-sqlite3": "^12.6.2",
     "chalk": "^5.6.2",
@@ -55,8 +73,7 @@
     "dotenv": "^17.2.4",
     "drizzle-orm": "^0.45.1",
     "exceljs": "^4.4.0",
-    "inquirer": "^13.2.2",
-    "tsx": "^4.7.0"
+    "inquirer": "^13.2.2"
   },
   "engines": {
     "node": ">=18.0.0"

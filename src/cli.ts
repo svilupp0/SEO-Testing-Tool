@@ -16,8 +16,12 @@
 import { config } from 'dotenv';
 config();
 
+import { createRequire } from 'module';
 import { Command } from 'commander';
 import { migrateDB } from './database/db.js';
+
+const require = createRequire(import.meta.url);
+const { version } = require('../package.json') as { version: string };
 import {
   loginCommand,
   addCommand,
@@ -36,7 +40,7 @@ const program = new Command();
 program
   .name('seo-tool')
   .description('SEO Testing Tool — Analisi statistica per esperimenti SEO')
-  .version('1.0.0');
+  .version(version);
 
 program
   .command('login')

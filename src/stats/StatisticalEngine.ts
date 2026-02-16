@@ -1,5 +1,5 @@
-import { AnalysisConfig, DEFAULT_ANALYSIS_CONFIG } from '../config/AnalysisConfig';
-import { twoTailedPValue } from './TDistribution';
+import { AnalysisConfig, DEFAULT_ANALYSIS_CONFIG } from '../config/AnalysisConfig.js';
+import { twoTailedPValue } from './TDistribution.js';
 
 export interface AnalysisInput {
   before: number[];

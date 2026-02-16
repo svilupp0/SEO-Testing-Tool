@@ -3,10 +3,8 @@
  * Carica le credenziali Google OAuth2 in modo sicuro da .env
  */
 
-// Per Node.js: carica variabili da .env
-// Nota: Installa con `npm install dotenv`
-// import dotenv from 'dotenv';
-// dotenv.config();
+import { readFileSync, readdirSync } from 'fs';
+import path from 'path';
 
 export interface GoogleOAuthConfig {
   clientId: string;
@@ -56,11 +54,7 @@ export function getGoogleOAuthConfig(): GoogleOAuthConfig {
  * @param filePath Percorso al file client_secret JSON
  */
 export function loadCredentialsFromFile(filePath: string): GoogleOAuthConfig {
-  // Questa funzione richiede fs (Node.js)
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const fs = require('fs');
-
-  const content = fs.readFileSync(filePath, 'utf-8');
+  const content = readFileSync(filePath, 'utf-8');
   const credentials = JSON.parse(content);
 
   // Il file può avere formato "installed" o "web"
@@ -91,11 +85,7 @@ export function getTestCredentials(): GoogleOAuthConfig {
     return getGoogleOAuthConfig();
   } catch {
     // Fallback: prova a caricare dal file client_secret
-    const fs = require('fs');
-    const path = require('path');
-
-    // Cerca il file client_secret nella root del progetto
-    const files = fs.readdirSync(process.cwd());
+    const files = readdirSync(process.cwd());
     const secretFile = files.find((f: string) => f.startsWith('client_secret_') && f.endsWith('.json'));
 
     if (secretFile) {

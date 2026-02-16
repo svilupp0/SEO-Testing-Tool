@@ -2,7 +2,7 @@
  * TokenManager - Gestione dei token OAuth2 e refresh automatico
  */
 
-import { GoogleOAuthService } from './GoogleOAuthService';
+import { GoogleOAuthService } from './GoogleOAuthService.js';
 
 interface TokenManagerConfig {
   clientId: string;
