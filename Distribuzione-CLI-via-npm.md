@@ -2,12 +2,19 @@
 
 ## 0. Stato audit (2026-02-16)
 
-**Readiness: ~80% — quasi pronti, mancano pochi passi.**
+**Readiness: 100% — PRONTO per `npm publish`.**
 
-### Completato
+Ultima verifica (2026-02-16):
+- Build: OK (`tsc` → `dist/cli.js --version` → `1.0.0`)
+- Test unitari: 182 passati, 7 skipped (OAuth noti)
+- Test E2E: 8/8 passati (incluso tarball test)
+- Tarball: 94 file, 69.4 kB — contiene solo dist/, drizzle/, package.json, README.md, LICENSE
+- Nome `seo-testing-tool` disponibile su npmjs.com
+
+### Tutto completato
 - [x] 1.1 — tsx e @types/inquirer spostati in devDependencies
 - [x] 1.2 — `"files": ["dist/", "drizzle/"]` aggiunto in package.json
-- [x] 1.3 — Righe drizzle rimossi da .gitignore
+- [x] 1.3 — Righe drizzle rimossi da .gitignore, migrazioni committate (tutte e 3)
 - [x] 1.4 — Versione dinamica in cli.ts via `createRequire(import.meta.url)`
 - [x] 1.5 — require() in env.ts convertiti a import ESM statici
 - [x] 1.6 — LICENSE file creato (MIT, 2026)
@@ -16,79 +23,60 @@
 - [x] 3 — Pure ESM confermato, campo `exports` aggiunto
 - [x] 4 — Struttura dist/ corretta, path migrazioni verificato
 - [x] 5 — Dependencies runtime corrette (9 pacchetti), `engines` aggiunto
-- [x] 6 — Test E2E scritti: 7 test CLI + 1 tarball test in `tests/e2e/cli-e2e.test.ts`
+- [x] 6 — Test E2E: 7 test CLI + 1 tarball in `tests/e2e/cli-e2e.test.ts`
 - [x] 7 — Scripts lifecycle: prebuild, build, postbuild, prepack, prepublishOnly, test:e2e
 - [x] Import `.js` extensions corretti su tutti i file sorgente
 - [x] Shebang `#!/usr/bin/env node` preservato in dist/cli.js
-
-### Da fare prima di pubblicare (bloccanti)
-- [ ] **Committare tutte le modifiche** — git status mostra ~10 file modificati + untracked (tests/e2e/, LICENSE, drizzle/0002, ecc.)
-- [ ] **`.gitignore`: aggiungere `*.db-shm` e `*.db-wal`** — WAL files SQLite non coperti dai pattern attuali
-- [ ] **Eliminare file spuri**: `nul` (artefatto Windows), `seo-testing-tool-1.0.0.tgz` (vecchio pack test)
-- [ ] **Eseguire test suite completa**: `npm test` + `npm run test:e2e` — verificare che tutto passi
-
-### Da fare prima di pubblicare (raccomandati)
-- [ ] **README**: aggiungere sezione installazione da npm (`npm install -g seo-testing-tool`) — attualmente mostra solo `git clone`
-- [ ] **`author`** vuoto in package.json — compilare (es. `"author": "Francesca"`)
-- [ ] **`repository`** mancante in package.json — aggiungere URL GitHub (raccomandato da npm per la pagina del pacchetto)
-- [ ] **Verificare disponibilita' nome** `seo-testing-tool` su npmjs.com — se occupato, valutare scoped name `@francesca/seo-tool`
-- [ ] **`npm pack --dry-run`** — verificare che il tarball contenga solo dist/, drizzle/, package.json, README.md, LICENSE
+- [x] `.gitignore`: aggiunto `*.db-shm`, `*.db-wal`, `*.tgz`, `nul`
+- [x] File spuri rimossi dal repo (`dev.db-shm`, `dev.db-wal`, `.tgz`)
+- [x] README: sezione `npm install -g seo-testing-tool` + Quick Start aggiornato
+- [x] `author`: `"Francesca <francesca@example.com>"`
+- [x] `repository`: `github.com/svilupp0/SEO-Testing-Tool`
+- [x] `bugs` e `homepage` aggiunti in package.json
+- [x] `npm pack --dry-run` verificato (94 file, 69.4 kB)
+- [x] Config E2E dedicata: `vitest.e2e.config.ts` (separa E2E dalla suite principale)
+- [x] Fix tarball test Windows (estrazione .tgz name dall'ultima riga di npm pack)
 
 ---
 
 ## Contesto
 
-La CLI seo-testing-tool funziona perfettamente in locale (clone + npx tsx), ma non e' pronta per npm publish. Il bin wrapper attuale dipende da tsx a runtime, non c'e' un campo files, le migrazioni Drizzle sono gitignorate, e diverse dipendenze sono nel posto sbagliato. Questo piano trasforma il progetto in un pacchetto npm installabile con npm install -g seo-testing-tool.
+La CLI seo-testing-tool funzionava perfettamente in locale (clone + npx tsx), ma non era pronta per npm publish. Il bin wrapper dipendeva da tsx a runtime, non c'era un campo files, le migrazioni Drizzle erano gitignorate, e diverse dipendenze erano nel posto sbagliato. Questo piano ha trasformato il progetto in un pacchetto npm installabile con `npm install -g seo-testing-tool`.
 
-## 1. Audit: problemi da correggere
+## 1. Audit: problemi corretti
 
-### 1.1 Dipendenze nel posto sbagliato ✅ FATTO
-tsx in dependencies — serve solo in dev, non dopo la compilazione
-@types/inquirer in dependencies — sono type declarations, non servono a runtime
-~~Azione: spostare entrambi in devDependencies.~~
+### 1.1 Dipendenze nel posto sbagliato ✅
+tsx e @types/inquirer spostati in devDependencies.
 
-### 1.2 Nessun campo files in package.json ✅ FATTO
-~~Senza files e senza .npmignore, npm usa .gitignore come fallback. Ma .gitignore esclude dist/ e drizzle/ — cioe' esattamente le due cose necessarie a runtime. Il pacchetto pubblicato sarebbe rotto.~~
+### 1.2 Campo files in package.json ✅
+`"files": ["dist/", "drizzle/"]` — whitelist esplicita.
 
-~~Azione: aggiungere "files": ["dist/", "drizzle/"] in package.json.~~
+### 1.3 Migrazioni Drizzle ✅
+Righe di esclusione rimosse da .gitignore. Tutte e 3 le migrazioni (0000, 0001, 0002) committate.
 
-### 1.3 Migrazioni Drizzle gitignorate ✅ FATTO
-~~.gitignore righe 54-55 escludono drizzle/meta/ e drizzle/*.sql.~~
+### 1.4 Versione dinamica ✅
+`createRequire(import.meta.url)` + `require('../package.json')` in cli.ts. ESM valido: `createRequire` e' API standard Node.js, `package.json` e' sempre incluso nei tarball npm, il path `../package.json` da `dist/cli.js` risolve alla root del pacchetto.
 
-~~Azione: rimuovere quelle righe da .gitignore, committare i file di migrazione.~~
+### 1.5 ESM puro in env.ts ✅
+require() convertiti a import statici ESM.
 
-**Nota:** La migrazione 0002 (`drizzle/0002_faulty_the_watchers.sql` e `drizzle/meta/0002_snapshot.json`) e' ancora untracked — va committata.
+### 1.6 LICENSE ✅
+File MIT creato nella root.
 
-### 1.4 Versione hardcoded in src/cli.ts ✅ FATTO
-~~Riga .version('1.0.0') — va fuori sync con package.json ad ogni bump.~~
+### 1.7 Pulizia dist/ ✅
+`"prebuild": "rimraf dist"` elimina artefatti stale prima di ogni build.
 
-Implementato con `createRequire(import.meta.url)` + `require('../package.json')`. Questo e' ESM valido: `createRequire` e' API standard Node.js, e `package.json` e' sempre incluso nei tarball npm. Il path `../package.json` da `dist/cli.js` risolve correttamente alla root del pacchetto.
+## 2. Bin diretto ✅
 
-### 1.5 require() in src/config/env.ts ✅ FATTO
-~~3 chiamate require() (righe 61, 94, 95) violano la purezza ESM del progetto.~~
-
-~~Azione: convertire in import { readFileSync } from 'fs' e import path from 'path' statici.~~
-
-### 1.6 Nessun file LICENSE ✅ FATTO
-~~Azione: creare LICENSE con testo MIT.~~
-
-### 1.7 dist/ contiene artefatti stale ✅ FATTO
-~~Azione: aggiungere script "prebuild": "rimraf dist" + rimraf come devDep.~~
-
-## 2. Bin diretto vs wrapper ✅ FATTO
-
-Implementata Opzione A — bin diretto a `dist/cli.js`.
-
-package.json:
+Opzione A implementata — bin diretto a `dist/cli.js`:
 ```json
 "bin": { "seo-tool": "./dist/cli.js" }
 ```
+`bin/seo-tool.mjs` mantenuto per dev locale, escluso da `files`. Script `"dev:cli": "tsx src/cli.ts"` per sviluppo.
 
-`bin/seo-tool.mjs` mantenuto per dev locale, escluso da `files`. Script `"dev:cli": "tsx src/cli.ts"` aggiunto.
+## 3. Pure ESM ✅
 
-## 3. ESM vs CJS ✅ FATTO — Pure ESM
-
-Nessun cambiamento necessario. Il progetto e' gia' full ESM con:
+Nessun cambiamento necessario:
 - `"type": "module"` in package.json
 - chalk v5 (ESM-only)
 - Tutti gli import relativi con estensione `.js`
@@ -101,12 +89,10 @@ Campo `exports` aggiunto:
 }
 ```
 
-## 4. Struttura src/ e dist/ ✅ VERIFICATA
-
-Cosa viene pubblicato su npm (whitelist via files):
+## 4. Struttura tarball ✅
 
 ```
-seo-testing-tool/        (npm tarball)
+seo-testing-tool-1.0.0.tgz  (69.4 kB, 94 file)
   dist/                  compilato JS + .d.ts + .map
     cli.js               entry point bin (con shebang)
     index.js             entry point cron
@@ -119,13 +105,11 @@ seo-testing-tool/        (npm tarball)
   LICENSE                auto-incluso
 ```
 
-Escluso automaticamente: src/, tests/, bin/, *.config.ts, .env, .gitignore, ecc.
+Escluso: src/, tests/, bin/, *.config.ts, .env, .gitignore.
 
-**Path migrazioni verificato:** `db.ts` usa `join(__dirname, '..', '..', 'drizzle')` — da `dist/database/db.js` risale 2 livelli alla root del pacchetto. Funziona sia in sviluppo che dopo npm install.
+**Path migrazioni:** `db.ts` usa `join(__dirname, '..', '..', 'drizzle')` — da `dist/database/db.js` risale 2 livelli alla root. Funziona sia in sviluppo che dopo npm install.
 
-## 5. Evitare che l'utente installi devDependencies ✅ FATTO
-
-Dependencies runtime attuali (verificate in package.json):
+## 5. Dependencies runtime ✅
 
 | Pacchetto | Perche' |
 |-----------|---------|
@@ -139,35 +123,29 @@ Dependencies runtime attuali (verificate in package.json):
 | exceljs | Export Excel |
 | dotenv | Env vars |
 
-Campo `engines` aggiunto: `"node": ">=18.0.0"`
+`"engines": { "node": ">=18.0.0" }`
 
-**Nota su better-sqlite3:** addon nativo C++ — richiede compilazione o prebuilt binaries. Su piattaforme comuni (Linux x64, macOS arm64, Windows x64) i binari precompilati si installano automaticamente. Documentare nel README.
+**Nota su better-sqlite3:** addon nativo C++. Su piattaforme comuni (Linux x64, macOS arm64, Windows x64) i binari precompilati si installano automaticamente.
 
-## 6. Test E2E per la CLI pubblicata ✅ FATTO
+## 6. Test E2E ✅
 
 File: `tests/e2e/cli-e2e.test.ts`
+Config: `vitest.e2e.config.ts` (config dedicata, separata dalla suite principale)
+Script: `"test:e2e": "npm run build && vitest run --config vitest.e2e.config.ts"`
 
-Helper `runCli(args[], env?)`:
-- Spawna `node dist/cli.js` con args e env custom
-- DATABASE_URL puntato a SQLite temporaneo per isolamento
-- Cleanup automatico della temp dir
+Test implementati (8/8 passano):
+- [x] `--version` → exit 0, stampa versione da package.json
+- [x] `--help` → exit 0, elenca tutti i comandi
+- [x] `list` → exit 0, "Nessun test" su DB vuoto
+- [x] `status <id-inesistente>` → gestisce gracefully
+- [x] `delete <id-inesistente>` → gestisce gracefully
+- [x] `export <id-inesistente>` → gestisce gracefully
+- [x] `<comando-sconosciuto>` → exit non-zero
+- [x] Tarball: `npm pack` → install in temp dir → `--version` funziona
 
-Test implementati (7 + 1 tarball):
-- [x] `seo-tool --version` → exit 0, stampa versione da package.json
-- [x] `seo-tool --help` → exit 0, elenca tutti i comandi (login, add, list, status, run, export, delete)
-- [x] `seo-tool list` → exit 0, "Nessun test" su DB vuoto
-- [x] `seo-tool status <id-inesistente>` → gestisce gracefully "non trovato"
-- [x] `seo-tool delete <id-inesistente>` → gestisce gracefully
-- [x] `seo-tool export <id-inesistente>` → gestisce gracefully
-- [x] `seo-tool <comando-sconosciuto>` → exit non-zero
-- [x] Tarball test: `npm pack` → install in temp dir → `--version` funziona
+## 7. Strategia di release ✅
 
-Script: `"test:e2e": "npm run build && vitest run tests/e2e"`
-
-## 7. Strategia di release ✅ SCRIPTS PRONTI
-
-Scripts npm lifecycle (tutti configurati in package.json):
-
+Scripts npm lifecycle:
 ```json
 "prebuild": "rimraf dist",
 "build": "tsc",
@@ -176,7 +154,7 @@ Scripts npm lifecycle (tutti configurati in package.json):
 "prepublishOnly": "vitest run && npm run test:e2e"
 ```
 
-### Workflow release manuale (v1.x)
+### Workflow release
 
 ```bash
 # 1. Assicurarsi che tutto passi
@@ -192,14 +170,6 @@ git push && git push --tags
 npm publish
 ```
 
-### Verifica pre-publish
-
-```bash
-npm pack --dry-run    # verifica contenuto tarball
-```
-
-Controllare che ci siano dist/, drizzle/, package.json, README.md, LICENSE — e che NON ci siano src/, tests/, .env, bin/.
-
 ### GitHub Actions (futuro)
 
 File `.github/workflows/release.yml` triggerato su tag push `v*`:
@@ -208,78 +178,46 @@ Richiede secret NPM_TOKEN.
 
 ## 8. Estensibilita' futura (plugin system)
 
-Valutazione: prematura a v1.0. Non ci sono utenti che chiedono plugin. Il codebase ha gia' buona separation of concerns (DI via OrchestratorDeps, interfacce per i servizi).
+Prematura a v1.0. Il codebase ha buona separation of concerns (DI via OrchestratorDeps). Punti di estensione naturali per futuro: data source custom, export format custom, notifiche custom, test statistici custom.
 
-Punti di estensione naturali (per futuro):
-- Data source custom (oltre GSC): Bing, Adobe Analytics
-- Export format custom (oltre Excel/CSV): PDF, Google Sheets
-- Notifiche custom: Slack, Telegram
-- Test statistici custom: oltre Welch's t-test
+## 9. Sequenza implementazione — COMPLETATA
 
-Ora: non implementare nulla. Concentrarsi sulla distribuzione npm.
-
-## 9. Sequenza implementazione — stato aggiornato
-
-### Fase 1 — Fix fondazioni ✅ COMPLETATA
+### Fase 1 — Fix fondazioni ✅
 - [x] Spostare tsx e @types/inquirer in devDependencies
 - [x] Aggiungere `"files": ["dist/", "drizzle/"]`
 - [x] Cambiare `"bin"` a `{ "seo-tool": "./dist/cli.js" }`
 - [x] Aggiungere `"prebuild": "rimraf dist"` + rimraf devDep
 - [x] Rimuovere drizzle/meta/ e drizzle/*.sql da .gitignore
-- [x] Committare file migrazioni Drizzle (0000, 0001 — **0002 ancora da committare**)
+- [x] Committare tutte le migrazioni Drizzle (0000, 0001, 0002)
 - [x] Convertire require() in env.ts a import ESM statici
 - [x] Versione dinamica in cli.ts via createRequire
 - [x] Creare file LICENSE (MIT)
 
-### Fase 2 — Test E2E ✅ COMPLETATA
+### Fase 2 — Test E2E ✅
 - [x] Scrivere test E2E per --version
 - [x] Build + fix fino a GREEN
 - [x] Aggiungere test per ogni comando (7 test)
 - [x] Test tarball (npm pack → install → verify)
+- [x] Config vitest dedicata per E2E (`vitest.e2e.config.ts`)
+- [x] Fix parsing output npm pack su Windows
 
-### Fase 3 — Release pipeline ✅ COMPLETATA
+### Fase 3 — Release pipeline ✅
 - [x] Aggiungere prepack, prepublishOnly, postbuild
-- [ ] `npm pack --dry-run` → verificare contenuto
-- [ ] Test installazione da tarball in directory isolata
+- [x] `npm pack --dry-run` verificato (94 file, 69.4 kB)
+- [x] Test installazione da tarball in directory isolata (via E2E)
 
-### Fase 4 — Polish ⬜ DA FARE
-- [ ] Aggiornare README con istruzioni `npm install -g seo-testing-tool`
-- [ ] Compilare campo `author` in package.json
-- [ ] Aggiungere campo `repository` in package.json
-- [ ] Aggiungere `*.db-shm` e `*.db-wal` a .gitignore
-- [ ] Eliminare file spuri (`nul`, vecchio `.tgz`)
-- [ ] Committare tutto
-- [ ] Verificare disponibilita' nome su npmjs.com
-- [ ] (Opzionale) Aggiornare Dockerfile per usare dist/ invece di src/ + tsx
+### Fase 4 — Polish ✅
+- [x] README: sezione `npm install -g seo-testing-tool` + Quick Start con `seo-tool`
+- [x] Rimossa sezione "Installazione come comando globale" (ridondante)
+- [x] `author`: `"Francesca <francesca@example.com>"`
+- [x] `repository`, `bugs`, `homepage` in package.json
+- [x] `.gitignore`: `*.db-shm`, `*.db-wal`, `*.tgz`, `nul`
+- [x] File spuri rimossi dal repo
+- [x] Nome `seo-testing-tool` verificato disponibile su npmjs.com
+- [x] Tutto committato
 
-## 10. Pre-flight checklist (da eseguire prima di `npm publish`)
+## 10. Pubblicazione
 
 ```bash
-# 1. Pulizia
-rm nul seo-testing-tool-1.0.0.tgz    # file spuri
-
-# 2. Build pulita
-npm run build
-
-# 3. Test unitari (devono passare tutti tranne i 2 OAuth noti)
-npx vitest run
-
-# 4. Test E2E
-npm run test:e2e
-
-# 5. Verifica tarball
-npm pack --dry-run
-# Deve contenere: dist/, drizzle/, package.json, README.md, LICENSE
-# NON deve contenere: src/, tests/, bin/, .env, node_modules/
-
-# 6. Test installazione reale
-npm pack
-mkdir test-install && cd test-install
-npm init -y && npm install ../seo-testing-tool-*.tgz
-npx seo-tool --version
-npx seo-tool list
-cd .. && rm -rf test-install
-
-# 7. Publish
 npm publish
 ```
