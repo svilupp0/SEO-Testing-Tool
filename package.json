@@ -46,8 +46,16 @@
     "google-search-console",
     "analytics"
   ],
-  "author": "",
+  "author": "Francesca <francesca@example.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/svilupp0/SEO-Testing-Tool.git"
+  },
+  "bugs": {
+    "url": "https://github.com/svilupp0/SEO-Testing-Tool/issues"
+  },
+  "homepage": "https://github.com/svilupp0/SEO-Testing-Tool#readme",
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/inquirer": "^9.0.9",

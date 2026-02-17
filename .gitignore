@@ -49,5 +49,11 @@ yarn-error.log*
 # Database
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
+
+# npm pack artifacts
+*.tgz
+nul

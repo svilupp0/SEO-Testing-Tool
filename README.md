@@ -18,17 +18,22 @@ Il tool non promette certezze, ma supporta decisioni informate attraverso analis
 
 ## Installazione
 
+### Da npm (utenti)
+
 ```bash
-# Clona il repository
-git clone <repo-url>
-cd seo-testing-tool
+npm install -g seo-testing-tool
+seo-tool --help
+```
 
-# Installa dipendenze
+> Richiede Node.js >= 18. Su alcune piattaforme `better-sqlite3` potrebbe richiedere build tools (python, make).
+
+### Da sorgente (sviluppatori)
+
+```bash
+git clone https://github.com/svilupp0/SEO-Testing-Tool.git
+cd SEO-Testing-Tool
 npm install
-
-# Configura variabili d'ambiente
 cp .env.example .env
-# Modifica .env con le tue credenziali
 ```
 
 ### Variabili d'ambiente (.env)
@@ -71,32 +76,16 @@ Una volta completato, esplora i risultati:
 
 ```bash
 # Elenca tutti gli esperimenti
-npx tsx src/cli.ts list
+seo-tool list
 
 # Visualizza dettaglio con grafico ASCII e analisi statistica
-npx tsx src/cli.ts status <ID>
+seo-tool status <ID>
 
 # Esporta le metriche in Excel o CSV
-npx tsx src/cli.ts export <ID>
+seo-tool export <ID>
 ```
 
 > L'ID viene mostrato al termine di `npm run demo`. Puoi usare anche solo i primi 8 caratteri.
-
-## Installazione come comando globale
-
-```bash
-# Registra il comando globale (non serve compilare)
-npm link
-
-# Ora puoi usare il tool da qualsiasi directory
-seo-tool --help
-```
-
-Per rimuovere il comando globale:
-
-```bash
-npm unlink -g seo-testing-tool
-```
 
 ## Comandi CLI
 
@@ -236,4 +225,4 @@ MIT
 ---
 
 **Versione:** 1.0.0 Stable
-**Last Updated:** 2026-02-12
+**Last Updated:** 2026-02-16
