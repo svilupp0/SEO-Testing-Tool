@@ -9,7 +9,7 @@
  *   seo-tool list          Mostra tutti i test
  *   seo-tool status <id>   Dettaglio test con grafico
  *   seo-tool run           Sincronizza test attivi
- *   seo-tool export <id>   Esporta dati in CSV
+ *   seo-tool export <id>   Esporta dati in Excel o CSV
  *   seo-tool delete <id>   Elimina un test
  */
 
