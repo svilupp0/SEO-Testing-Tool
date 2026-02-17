@@ -35,7 +35,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "cli:run": "tsx src/cli.ts run",
-    "test:e2e": "npm run build && vitest run tests/e2e",
+    "test:e2e": "npm run build && vitest run --config vitest.e2e.config.ts",
     "smoke-test": "tsx src/smoke-test.ts",
     "demo": "tsx src/demo.ts"
   },

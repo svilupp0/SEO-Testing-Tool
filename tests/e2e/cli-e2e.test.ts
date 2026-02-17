@@ -136,12 +136,13 @@ describe.skipIf(!CLI_EXISTS)('Tarball install', () => {
   it(
     'npm pack → install in dir temporanea → --version funziona',
     async () => {
-      // 1. Crea tarball
-      const tgzName = execSync('npm pack', {
+      // 1. Crea tarball (npm pack stdout include output di prepack — il .tgz e' l'ultima riga)
+      const packOutput = execSync('npm pack', {
         cwd: ROOT,
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
       }).trim();
+      const tgzName = packOutput.split(/\r?\n/).pop()!.trim();
       const tgzPath = join(ROOT, tgzName);
       const tmpDir = mkdtempSync(join(tmpdir(), 'seo-tarball-'));
 
