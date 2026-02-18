@@ -1,6 +1,6 @@
 {
   "name": "seo-testing-tool",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "SEO Testing Tool - Statistical analysis for SEO experiments",
   "type": "module",
   "main": "dist/index.js",

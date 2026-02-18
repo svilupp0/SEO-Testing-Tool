@@ -132,7 +132,7 @@ describe('Comando export', () => {
     expect(Buffer.isBuffer(buffer)).toBe(true);
 
     const csv = buffer.toString('utf-8');
-    expect(csv).toContain('Data,Clicks,Impressions,Gap Filled');
+    expect(csv).toContain('Data,Clicks,Impressions,CTR (%),Periodo,Gap Filled');
   });
 
   it('genera un file CSV con --format=csv diretto', async () => {

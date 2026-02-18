@@ -51,9 +51,32 @@ const COLORS = {
   greenFont: '1E8449',
   redBg: 'FDEDEC',
   redFont: 'C0392B',
+  warningBg: 'FEF9E7',
+  warningFont: 'B7950B',
+  splitBg: 'FFF9E0',
+  totalsBg: 'EAECEE',
   zebraBg: 'F8F9F9',
   borderColor: 'D5D8DC',
 } as const;
+
+interface PeriodStats {
+  beforeDays: number;
+  afterDays: number;
+  beforeFirstDate: string;
+  beforeLastDate: string;
+  afterFirstDate: string;
+  afterLastDate: string;
+  meanClicksBefore: number;
+  meanClicksAfter: number;
+  meanImpressionsBefore: number;
+  meanImpressionsAfter: number;
+  ctrBefore: number;
+  ctrAfter: number;
+  clicksVariation: number;
+  ctrVariationPp: number;
+  gapFilledCount: number;
+  gapFilledPercent: number;
+}
 
 // ── Service ───────────────────────────────────────────────────────────────────
 
@@ -71,7 +94,7 @@ export class ReportExportService {
     workbook.created = new Date();
 
     this.buildRiepilogoSheet(workbook, test, metrics);
-    this.buildDatiSheet(workbook, metrics);
+    this.buildDatiSheet(workbook, metrics, test.splitDate);
 
     const arrayBuffer = await workbook.xlsx.writeBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -90,14 +113,17 @@ export class ReportExportService {
   async exportToCSV(input: ExportInput): Promise<ExportResult> {
     const { test, metrics } = input;
     const lines: string[] = [];
+    const splitDateStr = test.splitDate.includes('T') ? test.splitDate.split('T')[0] : test.splitDate;
 
     // Header
-    lines.push('Data,Clicks,Impressions,Gap Filled');
+    lines.push('Data,Clicks,Impressions,CTR (%),Periodo,Gap Filled');
 
     // Righe
     for (const m of metrics) {
       const date = m.date.includes('T') ? m.date.split('T')[0] : m.date;
-      lines.push(`${date},${m.clicks},${m.impressions},${m.gapFilled ? 'sì' : 'no'}`);
+      const ctr = m.impressions > 0 ? (m.clicks / m.impressions * 100).toFixed(2) : '';
+      const periodo = date >= splitDateStr ? 'After' : 'Before';
+      lines.push(`${date},${m.clicks},${m.impressions},${ctr},${periodo},${m.gapFilled ? 'sì' : 'no'}`);
     }
 
     const csv = lines.join('\n') + '\n';
@@ -123,7 +149,7 @@ export class ReportExportService {
     });
 
     // Larghezze colonne
-    ws.getColumn(1).width = 24;
+    ws.getColumn(1).width = 28;
     ws.getColumn(2).width = 50;
 
     let row = 1;
@@ -157,6 +183,64 @@ export class ReportExportService {
     }
 
     row += 1;
+
+    // ── Sezione: Panoramica Periodi ───────────────────────────────────────
+    const stats = this.computePeriodStats(metrics, test.splitDate);
+
+    if (metrics.length > 0) {
+      row = this.addSectionHeader(ws, row, 'Panoramica Periodi');
+
+      const periodRows: [string, string][] = [
+        ['Periodo Before', stats.beforeDays > 0
+          ? `${stats.beforeDays} giorni (dal ${this.formatDate(stats.beforeFirstDate)} al ${this.formatDate(stats.beforeLastDate)})`
+          : 'Nessun dato'],
+        ['Periodo After', stats.afterDays > 0
+          ? `${stats.afterDays} giorni (dal ${this.formatDate(stats.afterFirstDate)} al ${this.formatDate(stats.afterLastDate)})`
+          : 'Nessun dato'],
+        ['Media clicks/giorno (Before)', stats.beforeDays > 0 ? stats.meanClicksBefore.toFixed(1) : '—'],
+        ['Media clicks/giorno (After)', stats.afterDays > 0 ? stats.meanClicksAfter.toFixed(1) : '—'],
+      ];
+
+      for (const [label, value] of periodRows) {
+        row = this.addLabelValueRow(ws, row, label, value);
+      }
+
+      // Variazione assoluta clicks (color-coded)
+      if (stats.beforeDays > 0 && stats.afterDays > 0) {
+        const variationStr = `${stats.clicksVariation >= 0 ? '+' : ''}${stats.clicksVariation.toFixed(1)} clicks/giorno`;
+        const variationRowNum = row;
+        row = this.addLabelValueRow(ws, row, 'Variazione assoluta', variationStr);
+        this.applyColorCoding(ws, variationRowNum, stats.clicksVariation);
+      }
+
+      // Impressions
+      const impressionRows: [string, string][] = [
+        ['Media impressions/giorno (Before)', stats.beforeDays > 0 ? stats.meanImpressionsBefore.toFixed(0) : '—'],
+        ['Media impressions/giorno (After)', stats.afterDays > 0 ? stats.meanImpressionsAfter.toFixed(0) : '—'],
+      ];
+      for (const [label, value] of impressionRows) {
+        row = this.addLabelValueRow(ws, row, label, value);
+      }
+
+      // CTR
+      const ctrRows: [string, string][] = [
+        ['CTR medio Before', stats.beforeDays > 0 ? `${stats.ctrBefore.toFixed(2)}%` : '—'],
+        ['CTR medio After', stats.afterDays > 0 ? `${stats.ctrAfter.toFixed(2)}%` : '—'],
+      ];
+      for (const [label, value] of ctrRows) {
+        row = this.addLabelValueRow(ws, row, label, value);
+      }
+
+      // Variazione CTR (color-coded)
+      if (stats.beforeDays > 0 && stats.afterDays > 0) {
+        const ctrVarStr = `${stats.ctrVariationPp >= 0 ? '+' : ''}${stats.ctrVariationPp.toFixed(2)} pp`;
+        const ctrVarRowNum = row;
+        row = this.addLabelValueRow(ws, row, 'Variazione CTR', ctrVarStr);
+        this.applyColorCoding(ws, ctrVarRowNum, stats.ctrVariationPp);
+      }
+
+      row += 1;
+    }
 
     // ── Sezione: Risultati Analisi ──────────────────────────────────────────
     row = this.addSectionHeader(ws, row, 'Risultati Analisi');
@@ -203,6 +287,46 @@ export class ReportExportService {
       }
     }
 
+    // Soglia utilizzata
+    row = this.addLabelValueRow(ws, row, 'Soglia utilizzata', 'α = 0.05');
+
+    // Interpretazione
+    const interpretation = this.getInterpretation(test.lastPValue, test.lastImprovement);
+    row = this.addLabelValueRow(ws, row, 'Interpretazione', interpretation);
+
+    row += 1;
+
+    // ── Sezione: Qualità Dati ───────────────────────────────────────────────
+    row = this.addSectionHeader(ws, row, 'Qualità Dati');
+
+    row = this.addLabelValueRow(ws, row, 'Giorni totali', `${metrics.length}`);
+
+    const gapStr = metrics.length > 0
+      ? `${stats.gapFilledCount} (${stats.gapFilledPercent.toFixed(1)}%)`
+      : '0';
+    row = this.addLabelValueRow(ws, row, 'Giorni gap-filled', gapStr);
+
+    // Qualità con color-coding
+    const qualityRowNum = row;
+    const isHighGap = metrics.length > 0 && stats.gapFilledPercent >= 15;
+    const qualityStr = metrics.length === 0
+      ? '—'
+      : isHighGap
+        ? 'Attenzione: >15% dati interpolati'
+        : 'Buona';
+    row = this.addLabelValueRow(ws, row, 'Qualità dati', qualityStr);
+
+    if (metrics.length > 0) {
+      const qualityCell = ws.getCell(qualityRowNum, 2);
+      if (isHighGap) {
+        qualityCell.font = { bold: true, color: { argb: COLORS.warningFont } };
+        qualityCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.warningBg } };
+      } else {
+        qualityCell.font = { bold: true, color: { argb: COLORS.greenFont } };
+        qualityCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.greenBg } };
+      }
+    }
+
     row += 1;
 
     // ── Footer ──────────────────────────────────────────────────────────────
@@ -214,16 +338,20 @@ export class ReportExportService {
 
   // ── Foglio 2: Dati Giornalieri ──────────────────────────────────────────
 
-  private buildDatiSheet(workbook: ExcelJS.Workbook, metrics: MetricRow[]): void {
+  private buildDatiSheet(workbook: ExcelJS.Workbook, metrics: MetricRow[], splitDate: string): void {
     const ws = workbook.addWorksheet('Dati Giornalieri', {
       views: [{ state: 'frozen', ySplit: 1 }],
     });
+
+    const splitDateStr = splitDate.includes('T') ? splitDate.split('T')[0] : splitDate;
 
     // Colonne
     ws.columns = [
       { header: 'Data', key: 'date', width: 14 },
       { header: 'Clicks', key: 'clicks', width: 12 },
       { header: 'Impressions', key: 'impressions', width: 14 },
+      { header: 'CTR (%)', key: 'ctr', width: 10 },
+      { header: 'Periodo', key: 'periodo', width: 10 },
       { header: 'Gap Filled', key: 'gapFilled', width: 12 },
     ];
 
@@ -239,37 +367,154 @@ export class ReportExportService {
     });
 
     // Righe dati
+    let splitHighlighted = false;
     for (let i = 0; i < metrics.length; i++) {
       const m = metrics[i];
       const date = m.date.includes('T') ? m.date.split('T')[0] : m.date;
+      const isAfter = date >= splitDateStr;
+      const ctr = m.impressions > 0 ? (m.clicks / m.impressions * 100).toFixed(2) : '—';
 
       const dataRow = ws.addRow({
         date,
         clicks: m.clicks,
         impressions: m.impressions,
+        ctr,
+        periodo: isAfter ? 'After' : 'Before',
         gapFilled: m.gapFilled ? 'Sì' : 'No',
       });
 
-      // Zebra striping
-      if (i % 2 === 1) {
+      // Evidenzia prima riga After (split date)
+      if (isAfter && !splitHighlighted) {
+        splitHighlighted = true;
+        dataRow.eachCell((cell) => {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.splitBg } };
+          cell.border = {
+            top: { style: 'medium', color: { argb: COLORS.warningFont } },
+          };
+        });
+      } else if (i % 2 === 1) {
+        // Zebra striping (skip for split row)
         dataRow.eachCell((cell) => {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.zebraBg } };
         });
       }
 
-      // Allineamento numerico
+      // Allineamento
       dataRow.getCell('clicks').alignment = { horizontal: 'right' };
       dataRow.getCell('impressions').alignment = { horizontal: 'right' };
+      dataRow.getCell('ctr').alignment = { horizontal: 'right' };
+      dataRow.getCell('periodo').alignment = { horizontal: 'center' };
       dataRow.getCell('gapFilled').alignment = { horizontal: 'center' };
+    }
+
+    // Riga totali/medie
+    if (metrics.length > 0) {
+      const totalClicks = metrics.reduce((s, m) => s + m.clicks, 0);
+      const totalImpressions = metrics.reduce((s, m) => s + m.impressions, 0);
+      const avgCtr = totalImpressions > 0 ? (totalClicks / totalImpressions * 100).toFixed(2) : '—';
+      const gapCount = metrics.filter(m => m.gapFilled).length;
+
+      const totalsRow = ws.addRow({
+        date: 'TOTALE',
+        clicks: totalClicks,
+        impressions: totalImpressions,
+        ctr: avgCtr,
+        periodo: '—',
+        gapFilled: `${gapCount}/${metrics.length}`,
+      });
+
+      totalsRow.eachCell((cell) => {
+        cell.font = { bold: true };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.totalsBg } };
+        cell.border = {
+          top: { style: 'double', color: { argb: COLORS.borderColor } },
+        };
+      });
+
+      totalsRow.getCell('clicks').alignment = { horizontal: 'right' };
+      totalsRow.getCell('impressions').alignment = { horizontal: 'right' };
+      totalsRow.getCell('ctr').alignment = { horizontal: 'right' };
+      totalsRow.getCell('periodo').alignment = { horizontal: 'center' };
+      totalsRow.getCell('gapFilled').alignment = { horizontal: 'center' };
     }
 
     // Auto-filtro
     if (metrics.length > 0) {
-      ws.autoFilter = { from: 'A1', to: 'D1' };
+      ws.autoFilter = { from: 'A1', to: 'F1' };
     }
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────
+
+  private computePeriodStats(metrics: MetricRow[], splitDate: string): PeriodStats {
+    const splitDateStr = splitDate.includes('T') ? splitDate.split('T')[0] : splitDate;
+
+    const normalize = (d: string) => d.includes('T') ? d.split('T')[0] : d;
+
+    const before = metrics.filter(m => normalize(m.date) < splitDateStr);
+    const after = metrics.filter(m => normalize(m.date) >= splitDateStr);
+
+    const mean = (arr: number[]) => arr.length > 0 ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
+
+    const meanClicksBefore = mean(before.map(m => m.clicks));
+    const meanClicksAfter = mean(after.map(m => m.clicks));
+    const meanImprBefore = mean(before.map(m => m.impressions));
+    const meanImprAfter = mean(after.map(m => m.impressions));
+
+    const totalClicksBefore = before.reduce((s, m) => s + m.clicks, 0);
+    const totalImprBefore = before.reduce((s, m) => s + m.impressions, 0);
+    const totalClicksAfter = after.reduce((s, m) => s + m.clicks, 0);
+    const totalImprAfter = after.reduce((s, m) => s + m.impressions, 0);
+
+    const ctrBefore = totalImprBefore > 0 ? (totalClicksBefore / totalImprBefore * 100) : 0;
+    const ctrAfter = totalImprAfter > 0 ? (totalClicksAfter / totalImprAfter * 100) : 0;
+
+    const gapFilledCount = metrics.filter(m => m.gapFilled).length;
+
+    const sortedBefore = before.map(m => normalize(m.date)).sort();
+    const sortedAfter = after.map(m => normalize(m.date)).sort();
+
+    return {
+      beforeDays: before.length,
+      afterDays: after.length,
+      beforeFirstDate: sortedBefore[0] ?? '',
+      beforeLastDate: sortedBefore[sortedBefore.length - 1] ?? '',
+      afterFirstDate: sortedAfter[0] ?? '',
+      afterLastDate: sortedAfter[sortedAfter.length - 1] ?? '',
+      meanClicksBefore,
+      meanClicksAfter,
+      meanImpressionsBefore: meanImprBefore,
+      meanImpressionsAfter: meanImprAfter,
+      ctrBefore,
+      ctrAfter,
+      clicksVariation: meanClicksAfter - meanClicksBefore,
+      ctrVariationPp: ctrAfter - ctrBefore,
+      gapFilledCount,
+      gapFilledPercent: metrics.length > 0 ? (gapFilledCount / metrics.length * 100) : 0,
+    };
+  }
+
+  private getInterpretation(pValue: number | null, improvement: number | null): string {
+    if (pValue === null) return 'Analisi non ancora disponibile';
+    if (pValue < 0.05 && improvement !== null && improvement > 0) {
+      return 'Variazione positiva statisticamente significativa';
+    }
+    if (pValue < 0.05 && improvement !== null && improvement < 0) {
+      return 'Variazione negativa statisticamente significativa — valutare rollback';
+    }
+    return 'Risultato non conclusivo — considerare estensione del test';
+  }
+
+  private applyColorCoding(ws: ExcelJS.Worksheet, rowNum: number, value: number): void {
+    const cell = ws.getCell(rowNum, 2);
+    if (value >= 0) {
+      cell.font = { bold: true, color: { argb: COLORS.greenFont } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.greenBg } };
+    } else {
+      cell.font = { bold: true, color: { argb: COLORS.redFont } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.redBg } };
+    }
+  }
 
   private addSectionHeader(ws: ExcelJS.Worksheet, row: number, title: string): number {
     const cell = ws.getCell(row, 1);
