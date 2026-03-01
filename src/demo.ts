@@ -10,6 +10,7 @@
  * Uso: npx tsx src/demo.ts   oppure   npm run demo
  */
 
+import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
 config();
 
@@ -75,7 +76,7 @@ function generateMetrics(
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
-function demo(): void {
+export function demo(): void {
   console.log('');
   console.log('╔══════════════════════════════════════════╗');
   console.log('║   SEO Testing Tool — Modalità Demo       ║');
@@ -162,10 +163,10 @@ function demo(): void {
     console.log('════════════════════════════════════════════');
     console.log('  Demo completata! Prova questi comandi:');
     console.log('');
-    console.log(`  npx tsx src/cli.ts list`);
-    console.log(`  npx tsx src/cli.ts status ${testPositive.id.slice(0, 8)}`);
-    console.log(`  npx tsx src/cli.ts status ${testNeutral.id.slice(0, 8)}`);
-    console.log(`  npx tsx src/cli.ts export ${testPositive.id.slice(0, 8)}`);
+    console.log(`  seo-tool list`);
+    console.log(`  seo-tool status ${testPositive.id.slice(0, 8)}`);
+    console.log(`  seo-tool status ${testNeutral.id.slice(0, 8)}`);
+    console.log(`  seo-tool export ${testPositive.id.slice(0, 8)}`);
     console.log('════════════════════════════════════════════');
     console.log('');
 
@@ -180,4 +181,6 @@ function demo(): void {
   }
 }
 
-demo();
+if (fileURLToPath(import.meta.url) === process.argv[1]) {
+  demo();
+}

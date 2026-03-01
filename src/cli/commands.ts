@@ -5,7 +5,7 @@
  */
 
 import { createInterface } from 'readline/promises';
-import { writeFile } from 'fs/promises';
+import { writeFile, readFile } from 'fs/promises';
 import path from 'path';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
@@ -477,6 +477,126 @@ export async function exportCommand(id: string, options?: { format?: string }): 
   } catch (error) {
     console.error(colors.error(`  Errore: ${error instanceof Error ? error.message : error}`));
   }
+}
+
+/**
+ * Aggiorna le righe di un file .env sostituendo le variabili già presenti
+ * e aggiungendo in coda quelle mancanti. Le variabili non-Google vengono preservate.
+ */
+function updateEnvVars(existingContent: string, vars: Record<string, string>): string {
+  const lines = existingContent ? existingContent.split('\n') : [];
+  const remaining = { ...vars };
+
+  const updated = lines.map(line => {
+    const match = /^([A-Z_]+)=/.exec(line);
+    if (match && match[1] in remaining) {
+      const key = match[1];
+      const value = remaining[key];
+      delete remaining[key];
+      return `${key}=${value}`;
+    }
+    return line;
+  });
+
+  for (const [key, value] of Object.entries(remaining)) {
+    updated.push(`${key}=${value}`);
+  }
+
+  return updated.join('\n');
+}
+
+/**
+ * setup — Wizard interattivo per configurare le credenziali Google OAuth2
+ */
+export async function setupCommand(): Promise<void> {
+  console.log('');
+  console.log(colors.header('  Configurazione Credenziali Google OAuth2'));
+  console.log(colors.muted('  ' + '\u2500'.repeat(40)));
+  console.log('');
+
+  const hasClientId = !!process.env['GOOGLE_CLIENT_ID'];
+  const hasClientSecret = !!process.env['GOOGLE_CLIENT_SECRET'];
+
+  if (hasClientId && hasClientSecret) {
+    console.log(colors.success('  \u2713 Credenziali già configurate:'));
+    console.log(colors.muted(`    GOOGLE_CLIENT_ID:     ${process.env['GOOGLE_CLIENT_ID']!.substring(0, 8)}...`));
+    console.log(colors.muted('    GOOGLE_CLIENT_SECRET: ***'));
+    console.log('');
+
+    const { overwrite } = await inquirer.prompt([{
+      type: 'confirm',
+      name: 'overwrite',
+      message: 'Vuoi sovrascriverle con nuove credenziali?',
+      default: false,
+    }]);
+
+    if (!overwrite) {
+      console.log(colors.muted('  Operazione annullata. Esegui "seo-tool login" per procedere.'));
+      console.log('');
+      return;
+    }
+  }
+
+  console.log(colors.info('  Per ottenere le credenziali OAuth2 Google:'));
+  console.log('');
+  console.log(colors.muted('  1. Vai su Google Cloud Console:'));
+  console.log('     https://console.cloud.google.com/apis/credentials');
+  console.log(colors.muted('  2. Crea un progetto (o selezionane uno esistente)'));
+  console.log(colors.muted('  3. Crea credenziali \u2192 OAuth 2.0 Client ID \u2192 Applicazione desktop'));
+  console.log(colors.muted('  4. Copia Client ID e Client Secret'));
+  console.log('');
+
+  const { clientId, clientSecret, redirectUri } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'clientId',
+      message: 'GOOGLE_CLIENT_ID:',
+      validate: (input: string) => input.trim().length > 0 || 'Il Client ID è obbligatorio.',
+    },
+    {
+      type: 'password',
+      name: 'clientSecret',
+      message: 'GOOGLE_CLIENT_SECRET:',
+      validate: (input: string) => input.trim().length > 0 || 'Il Client Secret è obbligatorio.',
+    },
+    {
+      type: 'input',
+      name: 'redirectUri',
+      message: 'GOOGLE_REDIRECT_URI:',
+      default: 'http://localhost:3000/auth/callback',
+    },
+  ]);
+
+  const envPath = path.join(process.cwd(), '.env');
+  let existingContent = '';
+  try {
+    existingContent = await readFile(envPath, 'utf-8');
+  } catch {
+    // File .env non esiste — partiamo da zero
+  }
+
+  const newContent = updateEnvVars(existingContent, {
+    GOOGLE_CLIENT_ID: (clientId as string).trim(),
+    GOOGLE_CLIENT_SECRET: (clientSecret as string).trim(),
+    GOOGLE_REDIRECT_URI: (redirectUri as string).trim() || 'http://localhost:3000/auth/callback',
+  });
+
+  await writeFile(envPath, newContent, 'utf-8');
+
+  console.log('');
+  console.log(colors.success('  \u2713 File .env aggiornato con le credenziali Google.'));
+  console.log('');
+  console.log(colors.info('  Prossimo step:'));
+  console.log(`  ${colors.muted('$')} seo-tool login`);
+  console.log('');
+}
+
+/**
+ * demo — Popola il database con 2 esperimenti di esempio (senza account Google)
+ */
+export async function demoCommand(): Promise<void> {
+  const { demo } = await import('../demo.js');
+  demo();
 }
 
 /**

@@ -30,6 +30,8 @@ import {
   runCommand,
   exportCommand,
   deleteCommand,
+  demoCommand,
+  setupCommand,
 } from './cli/commands.js';
 
 // Auto-setup: crea DB e tabelle al primo avvio
@@ -80,5 +82,15 @@ program
   .argument('<id>', 'ID del test (anche parziale)')
   .description('Elimina un test e le metriche collegate')
   .action(deleteCommand);
+
+program
+  .command('demo')
+  .description('Popola il database con 2 esperimenti di esempio (70 giorni, senza account Google)')
+  .action(demoCommand);
+
+program
+  .command('setup')
+  .description('Configura le credenziali Google OAuth2 in modo interattivo')
+  .action(setupCommand);
 
 program.parse();
