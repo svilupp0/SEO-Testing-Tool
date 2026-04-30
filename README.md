@@ -1,4 +1,4 @@
-# SEO Testing Tool v1.1.0
+# SEO Testing Tool v1.2.0
 
 CLI tool for SEO experiments with statistical analysis (Welch's t-test) and Google Search Console integration. Local SQLite database (zero configuration).
 
@@ -126,6 +126,9 @@ GOOGLE_REDIRECT_URI=http://localhost:3000/auth/callback
 
 # Optional: default ~/.seo-tool/data.db
 # DATABASE_URL=file:/custom/path/data.db
+
+# Optional: webhook for notifications (Slack, Discord, n8n, Zapier, etc.)
+# NOTIFICATION_WEBHOOK_URL=https://hooks.slack.com/services/xxx/yyy/zzz
 ```
 
 ### Development Commands
@@ -242,4 +245,4 @@ MIT
 ---
 
 **Version:** 1.1.0
-**Last Updated:** 2026-03-01
+**Last Updated:** 2026-04-30
