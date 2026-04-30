@@ -1,4 +1,7 @@
-import { AnalysisConfig, DEFAULT_ANALYSIS_CONFIG } from '../config/AnalysisConfig.js';
+import {
+  AnalysisConfig,
+  DEFAULT_ANALYSIS_CONFIG,
+} from '../config/AnalysisConfig.js';
 import { twoTailedPValue } from './TDistribution.js';
 
 export interface AnalysisInput {
@@ -43,10 +46,18 @@ export class StatisticalEngine {
   }
 
   analyze(input: AnalysisInput): AnalysisResult {
-    const { before, after, seasonalityAware = false, startDayOfWeek, controlGroup } = input;
+    const {
+      before,
+      after,
+      seasonalityAware = false,
+      startDayOfWeek,
+      controlGroup,
+    } = input;
 
     // Rileva stagionalità se richiesto
-    const seasonalityInfo = seasonalityAware ? this.detectSeasonality(before) : { detected: false, period: null };
+    const seasonalityInfo = seasonalityAware
+      ? this.detectSeasonality(before)
+      : { detected: false, period: null };
 
     // Allinea i dati se c'è un offset nei giorni della settimana
     let alignedBefore = before;
@@ -80,7 +91,8 @@ export class StatisticalEngine {
     const meanAfterOutlierRemoval = meanAfter;
 
     // Calcola variazione percentuale
-    const percentageChange = meanBefore !== 0 ? ((meanAfter - meanBefore) / meanBefore) * 100 : 0;
+    const percentageChange =
+      meanBefore !== 0 ? ((meanAfter - meanBefore) / meanBefore) * 100 : 0;
 
     // Calcola performance relativa se c'è un gruppo di controllo
     let relativePerformance: number | undefined;
@@ -89,17 +101,19 @@ export class StatisticalEngine {
     if (controlGroup) {
       const controlMeanBefore = this.calculateMean(controlGroup.before);
       const controlMeanAfter = this.calculateMean(controlGroup.after);
-      controlGroupPerformance = ((controlMeanAfter - controlMeanBefore) / controlMeanBefore) * 100;
+      controlGroupPerformance =
+        ((controlMeanAfter - controlMeanBefore) / controlMeanBefore) * 100;
 
       // Performance relativa = differenza tra test e controllo
       relativePerformance = percentageChange - controlGroupPerformance;
     }
 
     // Verifica dati insufficienti: volume troppo basso o campione troppo piccolo
-    const hasInsufficientData = meanBefore < this.config.minimumDataThreshold ||
-                                 meanAfter < this.config.minimumDataThreshold ||
-                                 dataBefore.length < this.config.minimumSampleSize ||
-                                 dataAfter.length < this.config.minimumSampleSize;
+    const hasInsufficientData =
+      meanBefore < this.config.minimumDataThreshold ||
+      meanAfter < this.config.minimumDataThreshold ||
+      dataBefore.length < this.config.minimumSampleSize ||
+      dataAfter.length < this.config.minimumSampleSize;
 
     // Determina significatività e messaggio
     let isSignificant = false;
@@ -109,7 +123,8 @@ export class StatisticalEngine {
     let message = 'Nessun cambiamento significativo rilevato.';
 
     if (hasInsufficientData) {
-      message = 'Dati insufficienti per determinare significatività statistica. Continua il test.';
+      message =
+        'Dati insufficienti per determinare significatività statistica. Continua il test.';
     } else {
       // Welch's t-test reale
       const tTestResult = this.welchTTest(dataBefore, dataAfter);
@@ -123,9 +138,11 @@ export class StatisticalEngine {
         // Messaggio basato su performance relativa
         if (isSignificant) {
           if (relativePerformance > 0) {
-            message = 'Le pagine del test hanno performato meglio del resto del sito.';
+            message =
+              'Le pagine del test hanno performato meglio del resto del sito.';
           } else {
-            message = 'Le pagine del test hanno performato peggio del resto del sito.';
+            message =
+              'Le pagine del test hanno performato peggio del resto del sito.';
           }
         } else {
           message = 'Nessun cambiamento significativo rilevato.';
@@ -173,7 +190,11 @@ export class StatisticalEngine {
         return { tStatistic: 0, degreesOfFreedom: n1 + n2 - 2, pValue: 1.0 };
       }
       // Medie diverse con varianza zero = separazione perfetta
-      return { tStatistic: mean2 > mean1 ? Infinity : -Infinity, degreesOfFreedom: n1 + n2 - 2, pValue: 0.0 };
+      return {
+        tStatistic: mean2 > mean1 ? Infinity : -Infinity,
+        degreesOfFreedom: n1 + n2 - 2,
+        pValue: 0.0,
+      };
     }
 
     const se1 = var1 / n1;
@@ -200,11 +221,17 @@ export class StatisticalEngine {
   private calculateVariance(values: number[], mean?: number): number {
     if (values.length < 2) return 0;
     const m = mean ?? this.calculateMean(values);
-    const sumSquaredDiffs = values.reduce((acc, val) => acc + (val - m) ** 2, 0);
+    const sumSquaredDiffs = values.reduce(
+      (acc, val) => acc + (val - m) ** 2,
+      0
+    );
     return sumSquaredDiffs / (values.length - 1); // Correzione di Bessel
   }
 
-  private detectSeasonality(values: number[]): { detected: boolean; period: number | null } {
+  private detectSeasonality(values: number[]): {
+    detected: boolean;
+    period: number | null;
+  } {
     // Rileva pattern settimanale (periodo 7)
     if (values.length < 14) {
       return { detected: false, period: null };
@@ -234,7 +261,10 @@ export class StatisticalEngine {
     return { detected: false, period: null };
   }
 
-  private detectOutliers(values: number[], period: 'before' | 'after'): Outlier[] {
+  private detectOutliers(
+    values: number[],
+    period: 'before' | 'after'
+  ): Outlier[] {
     const outliers: Outlier[] = [];
 
     // Usa metodo IQR (Interquartile Range)
@@ -257,7 +287,7 @@ export class StatisticalEngine {
   }
 
   private removeOutliers(values: number[], outliers: Outlier[]): number[] {
-    const outlierIndices = new Set(outliers.map(o => o.index));
+    const outlierIndices = new Set(outliers.map((o) => o.index));
     return values.filter((_, index) => !outlierIndices.has(index));
   }
 

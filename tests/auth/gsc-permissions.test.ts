@@ -1,16 +1,16 @@
 /**
  * Test 1.5 - Test Permessi GSC
- * 
+ *
  * Priorità: ALTA
- * 
- * Obiettivo: Verificare la gestione dei permessi read-only e assenza di 
+ *
+ * Obiettivo: Verificare la gestione dei permessi read-only e assenza di
  * permessi in GSC
- * 
+ *
  * Scenario 1: L'utente ha accesso read-only a una proprietà GSC
  * Risultato atteso: Il tool riesce a leggere i dati senza problemi
- * 
+ *
  * Scenario 2: L'utente non ha permessi sulla proprietà
- * Risultato atteso: Errore chiaro: 
+ * Risultato atteso: Errore chiaro:
  * "Non hai accesso a questa proprietà su Google Search Console."
  */
 
@@ -53,7 +53,7 @@ describe('Test 1.5 - Permessi GSC', () => {
     expect(hasAccess).toBe(true);
   });
 
-  it('dovrebbe rifiutare l\'accesso quando l\'utente non ha permessi sulla proprietà', async () => {
+  it("dovrebbe rifiutare l'accesso quando l'utente non ha permessi sulla proprietà", async () => {
     // Arrange: Utente senza accesso alla proprietà
     const userId = 'user-no-access-456';
     const propertyUrl = 'https://notmyproperty.com';
@@ -65,7 +65,8 @@ describe('Test 1.5 - Permessi GSC', () => {
         JSON.stringify({
           error: {
             code: 403,
-            message: 'User does not have sufficient permissions for this property.',
+            message:
+              'User does not have sufficient permissions for this property.',
           },
         }),
         { status: 403 }
@@ -78,10 +79,12 @@ describe('Test 1.5 - Permessi GSC', () => {
         startDate: '2024-01-01',
         endDate: '2024-01-31',
       })
-    ).rejects.toThrow('Non hai accesso a questa proprietà su Google Search Console.');
+    ).rejects.toThrow(
+      'Non hai accesso a questa proprietà su Google Search Console.'
+    );
   });
 
-  it('dovrebbe elencare solo le proprietà a cui l\'utente ha accesso', async () => {
+  it("dovrebbe elencare solo le proprietà a cui l'utente ha accesso", async () => {
     // Arrange: Utente con accesso a multiple properties
     const accessToken = 'valid-token-multi-props';
 
@@ -109,7 +112,8 @@ describe('Test 1.5 - Permessi GSC', () => {
     );
 
     // Act: Recuperiamo la lista delle proprietà
-    const properties = await permissionService.listAvailableProperties(accessToken);
+    const properties =
+      await permissionService.listAvailableProperties(accessToken);
 
     // Assert: Deve ricevere tutte le proprietà accessibili
     expect(properties).toHaveLength(3);
@@ -123,10 +127,9 @@ describe('Test 1.5 - Permessi GSC', () => {
 
     // Test 1: siteOwner (accesso completo)
     vi.spyOn(global, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ permissionLevel: 'siteOwner' }),
-        { status: 200 }
-      )
+      new Response(JSON.stringify({ permissionLevel: 'siteOwner' }), {
+        status: 200,
+      })
     );
 
     let level = await permissionService.getPermissionLevel(
@@ -138,10 +141,9 @@ describe('Test 1.5 - Permessi GSC', () => {
 
     // Test 2: siteFullUser (può leggere)
     vi.spyOn(global, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ permissionLevel: 'siteFullUser' }),
-        { status: 200 }
-      )
+      new Response(JSON.stringify({ permissionLevel: 'siteFullUser' }), {
+        status: 200,
+      })
     );
 
     level = await permissionService.getPermissionLevel(
@@ -153,10 +155,9 @@ describe('Test 1.5 - Permessi GSC', () => {
 
     // Test 3: siteRestrictedUser (può leggere)
     vi.spyOn(global, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ permissionLevel: 'siteRestrictedUser' }),
-        { status: 200 }
-      )
+      new Response(JSON.stringify({ permissionLevel: 'siteRestrictedUser' }), {
+        status: 200,
+      })
     );
 
     level = await permissionService.getPermissionLevel(
@@ -168,10 +169,9 @@ describe('Test 1.5 - Permessi GSC', () => {
 
     // Test 4: siteUnverifiedUser (non può leggere)
     vi.spyOn(global, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ permissionLevel: 'siteUnverifiedUser' }),
-        { status: 200 }
-      )
+      new Response(JSON.stringify({ permissionLevel: 'siteUnverifiedUser' }), {
+        status: 200,
+      })
     );
 
     level = await permissionService.getPermissionLevel(
@@ -227,10 +227,12 @@ describe('Test 1.5 - Permessi GSC', () => {
         startDate: '2024-01-01',
         endDate: '2024-01-31',
       })
-    ).rejects.toThrow('Non hai accesso a questa proprietà su Google Search Console.');
+    ).rejects.toThrow(
+      'Non hai accesso a questa proprietà su Google Search Console.'
+    );
   });
 
-  it('dovrebbe gestire la rimozione dell\'accesso durante l\'uso dell\'app', async () => {
+  it("dovrebbe gestire la rimozione dell'accesso durante l'uso dell'app", async () => {
     // Arrange: L'utente aveva accesso, ma viene rimosso durante l'uso
     const accessToken = 'token-permission-revoked';
     const propertyUrl = 'https://access-removed.com';
@@ -267,7 +269,9 @@ describe('Test 1.5 - Permessi GSC', () => {
         startDate: '2024-01-01',
         endDate: '2024-01-31',
       })
-    ).rejects.toThrow('Non hai accesso a questa proprietà su Google Search Console.');
+    ).rejects.toThrow(
+      'Non hai accesso a questa proprietà su Google Search Console.'
+    );
   });
 
   it('dovrebbe mostrare messaggi diversi per proprietà non trovata vs no permissions', async () => {
@@ -276,10 +280,7 @@ describe('Test 1.5 - Permessi GSC', () => {
 
     // Test 1: Proprietà non trovata (404)
     vi.spyOn(global, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ error: { code: 404 } }),
-        { status: 404 }
-      )
+      new Response(JSON.stringify({ error: { code: 404 } }), { status: 404 })
     );
 
     await expect(
@@ -288,15 +289,17 @@ describe('Test 1.5 - Permessi GSC', () => {
 
     // Test 2: Nessun permesso (403)
     vi.spyOn(global, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ error: { code: 403 } }),
-        { status: 403 }
-      )
+      new Response(JSON.stringify({ error: { code: 403 } }), { status: 403 })
     );
 
     await expect(
-      permissionService.checkPropertyAccess(accessToken, 'https://forbidden.com')
-    ).rejects.toThrow('Non hai accesso a questa proprietà su Google Search Console.');
+      permissionService.checkPropertyAccess(
+        accessToken,
+        'https://forbidden.com'
+      )
+    ).rejects.toThrow(
+      'Non hai accesso a questa proprietà su Google Search Console.'
+    );
   });
 
   it('dovrebbe supportare sia URL properties che Domain properties', async () => {
@@ -305,10 +308,9 @@ describe('Test 1.5 - Permessi GSC', () => {
 
     // Mock per URL property (https://)
     vi.spyOn(global, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ permissionLevel: 'siteOwner' }),
-        { status: 200 }
-      )
+      new Response(JSON.stringify({ permissionLevel: 'siteOwner' }), {
+        status: 200,
+      })
     );
 
     const urlAccess = await permissionService.checkPropertyAccess(
@@ -319,10 +321,9 @@ describe('Test 1.5 - Permessi GSC', () => {
 
     // Mock per Domain property (sc-domain:)
     vi.spyOn(global, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ permissionLevel: 'siteOwner' }),
-        { status: 200 }
-      )
+      new Response(JSON.stringify({ permissionLevel: 'siteOwner' }), {
+        status: 200,
+      })
     );
 
     const domainAccess = await permissionService.checkPropertyAccess(
@@ -341,10 +342,9 @@ describe('Test 1.5 - Permessi GSC', () => {
 
     // Prima chiamata
     fetchSpy.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ permissionLevel: 'siteOwner' }),
-        { status: 200 }
-      )
+      new Response(JSON.stringify({ permissionLevel: 'siteOwner' }), {
+        status: 200,
+      })
     );
 
     await permissionService.checkPropertyAccess(accessToken, propertyUrl);
@@ -352,7 +352,7 @@ describe('Test 1.5 - Permessi GSC', () => {
 
     // Seconda chiamata - deve usare cache
     await permissionService.checkPropertyAccess(accessToken, propertyUrl);
-    
+
     // Assert: Non deve fare una seconda chiamata HTTP
     expect(fetchSpy).toHaveBeenCalledTimes(1); // Ancora 1, non 2
   });
@@ -364,10 +364,9 @@ describe('Test 1.5 - Permessi GSC', () => {
 
     // Prima chiamata: ha accesso
     vi.spyOn(global, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ permissionLevel: 'siteOwner' }),
-        { status: 200 }
-      )
+      new Response(JSON.stringify({ permissionLevel: 'siteOwner' }), {
+        status: 200,
+      })
     );
 
     const access1 = await permissionService.checkPropertyAccess(
@@ -381,16 +380,15 @@ describe('Test 1.5 - Permessi GSC', () => {
 
     // Nuova chiamata: deve controllare di nuovo
     vi.spyOn(global, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ error: { code: 403 } }),
-        { status: 403 }
-      )
+      new Response(JSON.stringify({ error: { code: 403 } }), { status: 403 })
     );
 
     // Act & Assert: Deve rilevare il cambiamento
     await expect(
       permissionService.checkPropertyAccess(accessToken, propertyUrl)
-    ).rejects.toThrow('Non hai accesso a questa proprietà su Google Search Console.');
+    ).rejects.toThrow(
+      'Non hai accesso a questa proprietà su Google Search Console.'
+    );
   });
 
   it('dovrebbe fornire un messaggio utile quando nessuna proprietà è disponibile', async () => {
@@ -399,21 +397,21 @@ describe('Test 1.5 - Permessi GSC', () => {
 
     // Mock: nessuna proprietà disponibile
     vi.spyOn(global, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ siteEntry: [] }),
-        { status: 200 }
-      )
+      new Response(JSON.stringify({ siteEntry: [] }), { status: 200 })
     );
 
     // Act: Tentiamo di elencare le proprietà
-    const properties = await permissionService.listAvailableProperties(accessToken);
+    const properties =
+      await permissionService.listAvailableProperties(accessToken);
 
     // Assert: Lista vuota + messaggio chiaro nel sistema
     expect(properties).toHaveLength(0);
-    
+
     // Il sistema dovrebbe mostrare un messaggio guida
     const userMessage = permissionService.getNoPropertiesMessage();
-    expect(userMessage).toContain('Non hai proprietà configurate in Google Search Console');
+    expect(userMessage).toContain(
+      'Non hai proprietà configurate in Google Search Console'
+    );
     expect(userMessage).toContain('Aggiungi il tuo sito');
   });
 });

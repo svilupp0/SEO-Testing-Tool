@@ -100,7 +100,10 @@ export class NotificationService {
   /**
    * Test 6.2 - Genera digest settimanale
    */
-  async generateWeeklyDigest(_userId: string, activeTests: ActiveTest[]): Promise<WeeklyDigest> {
+  async generateWeeklyDigest(
+    _userId: string,
+    activeTests: ActiveTest[]
+  ): Promise<WeeklyDigest> {
     // Ordina test per priorità (significativi prima)
     const sortedTests = [...activeTests].sort((a, b) => {
       // Test con p-value < 0.05 hanno priorità
@@ -115,7 +118,9 @@ export class NotificationService {
     });
 
     // Genera riepilogo complessivo
-    const significantTests = activeTests.filter(t => t.currentProgress.pValue < 0.05);
+    const significantTests = activeTests.filter(
+      (t) => t.currentProgress.pValue < 0.05
+    );
     const summary = `${activeTests.length} test attivi. ${significantTests.length} statisticamente significativi.`;
 
     // Genera body con sezioni per ogni test
@@ -162,7 +167,10 @@ export class NotificationService {
   /**
    * Test 6.2 - Determina se inviare digest settimanale
    */
-  async shouldSendWeeklyDigest(_userId: string, activeTests: ActiveTest[]): Promise<boolean> {
+  async shouldSendWeeklyDigest(
+    _userId: string,
+    activeTests: ActiveTest[]
+  ): Promise<boolean> {
     // NON inviare se non ci sono test attivi
     return activeTests.length > 0;
   }

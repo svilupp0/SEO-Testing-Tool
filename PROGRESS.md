@@ -11,15 +11,15 @@
 
 ## 📈 Overall Summary
 
-| Metric | Value |
-|--------|-------|
-| **Total Tests Implemented** | 237 |
-| **✅ Passing** | 231 (97.5%) |
-| **❌ Failing** | 2 (0.8%) |
-| **⏭️ Skipped** | 4 (1.7%) |
-| **Test Files** | 19 (18 pass, 1 fail) |
-| **Source Files** | 22 |
-| **Lines of Code** | ~6,500 (source + tests) |
+| Metric                      | Value                   |
+| --------------------------- | ----------------------- |
+| **Total Tests Implemented** | 237                     |
+| **✅ Passing**              | 231 (97.5%)             |
+| **❌ Failing**              | 2 (0.8%)                |
+| **⏭️ Skipped**              | 4 (1.7%)                |
+| **Test Files**              | 19 (18 pass, 1 fail)    |
+| **Source Files**            | 22                      |
+| **Lines of Code**           | ~6,500 (source + tests) |
 
 ---
 
@@ -32,6 +32,7 @@
 **Tests:** 47/47 passing (100%) - excluding 2 integration tests requiring real Google API
 
 #### 1.1 - Login Google OAuth2 (7 tests) ✅
+
 - ✅ Generazione URL autenticazione Google valido
 - ✅ Scambio codice autorizzazione con token
 - ✅ Recupero informazioni utente
@@ -41,10 +42,12 @@
 - ✅ Validazione parametro state nel callback
 
 **Files:**
+
 - `src/auth/GoogleOAuthService.ts`
 - `tests/auth/google-oauth2.test.ts` ✅ ALL PASS (7/7)
 
 #### 1.2 - Scadenza Token (10 tests) ✅
+
 - ✅ Rilevamento token scaduto
 - ✅ Rilevamento token valido
 - ✅ Refresh token per nuovo access token
@@ -57,19 +60,23 @@
 - ✅ Mantenimento refresh token dopo rinnovo
 
 **Files:**
+
 - `src/auth/TokenManager.ts`
 - `tests/auth/token-refresh.test.ts` ✅ ALL PASS (10/10)
 
 #### 1.3 - Revoca Accesso (8 tests) ✅
+
 - ✅ Rilevamento revoca accesso (401)
 - ✅ Messaggio chiaro: "Accesso revocato"
 - ✅ Stop tentativi dopo revoca (no loop 401)
 
 **Files:**
+
 - `src/auth/AuthorizationService.ts`
 - `tests/auth/access-revocation.test.ts` ✅ ALL PASS (8/8)
 
 #### 1.4 - Multi-tenancy (10 tests) ✅
+
 - ✅ Utente A NO accesso test utente B (403)
 - ✅ Utente può accedere ai propri test
 - ✅ Admin può accedere a tutti i test
@@ -78,16 +85,19 @@
 - ✅ Gestione test condivisi (graceful handling quando supportsSharing=false)
 
 **Files:**
+
 - `src/auth/AuthorizationService.ts`
 - `tests/auth/multi-tenancy.test.ts` ✅ ALL PASS (10/10)
 
 #### 1.5 - Permessi GSC (12 tests) ✅
+
 - ✅ Accesso read-only funziona
 - ✅ Utente senza permessi riceve errore chiaro
 - ✅ Verifica permessi prima fetch
 - ✅ Rimozione accesso durante uso rilevata
 
 **Files:**
+
 - `src/gsc/GSCPermissionService.ts`
 - `tests/auth/gsc-permissions.test.ts` ✅ ALL PASS (12/12)
 
@@ -100,25 +110,30 @@
 **Tests:** 14/14 passing (100%)
 
 #### 2.1 - Rate Limit (2 tests) ✅
+
 - ✅ Exponential backoff su 429: 1s → 2s → 4s → 8s → 16s
 - ✅ Errore dopo MAX_RETRIES (5)
 
 #### 2.2 - Dati Mancanti (3 tests) ✅
+
 - ✅ Riconoscimento gap temporale GSC (2-3 giorni)
 - ✅ Gap NON calcolato come traffico zero
 - ✅ Statistiche corrette: media solo su giorni con dati
 
 #### 2.3 - Discrepanza Fuso Orario (4 tests) ✅
+
 - ✅ Allineamento PST (Google) ↔ UTC+1 (Italia)
 - ✅ Gestione DST (Daylight Saving Time)
 - ✅ Confronto periodi nello stesso timezone
 - ✅ Warning se timezone non specificato
 
 #### 2.4 - Proprietà Giganti (2 tests) ✅
+
 - ✅ Gestione errori batch processing con retry
 - ✅ Processing parallelo batch con concurrency
 
 **Files:**
+
 - `src/gsc/GSCDataFetcher.ts`
 - `tests/gsc/gsc-data-fetcher.test.ts`
 
@@ -131,22 +146,26 @@
 **Tests:** 19/20 passing (95%)
 
 #### 3.1 - Test Ipotesi Nulla (3 tests) ✅
+
 - ✅ Riconoscimento dati identici (100 click/giorno)
 - ✅ p-value alto (> 0.05) quando no cambiamento
 - ✅ Variazione ~0% con dati identici
 
 #### 3.2 - Test Significatività (3 tests) ✅
+
 - ✅ Dati insufficienti: 10 click/giorno → NON significativo
 - ✅ Variazione 20% ma 5-6 click → NON significativo
 - ✅ Volume sufficiente: 1000 click con +20% → significativo
 
 #### 3.3 - Test Outlier (4 tests) ✅
+
 - ✅ Rilevazione outlier evidente (10k vs 100 normale)
 - ✅ Rilevazione outlier multipli (3 picchi)
 - ✅ Nessun falso positivo con variazione naturale
 - ✅ Gestione outlier nel periodo "before"
 
 #### 3.4 - Test Stagionalità (5 tests) 🟡
+
 - ✅ Pattern settimanale (lun-ven alto, sab-dom basso)
 - ✅ Rilevazione periodo stagionale (7 giorni)
 - ✅ Cambiamenti reali rilevati anche con stagionalità
@@ -154,6 +173,7 @@
 - ⏭️ Offset giornaliero complesso (skipped - MVP)
 
 #### 3.5 - Test Gruppo di Controllo (5 tests) ✅
+
 - ✅ Performance relativa positiva
 - ✅ Performance relativa negativa
 - ✅ Funzionamento senza gruppo controllo
@@ -161,6 +181,7 @@
 - ✅ Miglioramento assoluto con controllo stabile
 
 **Files:**
+
 - `src/stats/StatisticalEngine.ts` (340 lines)
 - `tests/stats/statistical-engine.test.ts` (485 lines)
 
@@ -173,6 +194,7 @@
 **Tests:** 21/21 passing (100%)
 
 #### 4.1 - Test Sovrapposizione (6 tests) ✅
+
 - ✅ Impedimento secondo test su pagina già in test
 - ✅ Permesso test su pagine diverse
 - ✅ Rilevazione sovrapposizione in lista
@@ -181,6 +203,7 @@
 - ✅ Messaggio errore con nome test bloccante
 
 #### 4.2 - Test Modifica in Corso (6 tests) ✅
+
 - ✅ Richiesta conferma per modifica data
 - ✅ Permesso modifica data con conferma
 - ✅ Ricalcolo dati quando data modificata
@@ -189,6 +212,7 @@
 - ✅ Notifica quantità dati persi
 
 #### 4.3 - Test Cancellazione (9 tests) ✅
+
 - ✅ Eliminazione test con dati storici (confirm: true)
 - ✅ Eliminazione completa (GDPR)
 - ✅ Richiesta conferma prima eliminazione
@@ -200,6 +224,7 @@
 - ✅ Opzione esportazione prima cancellazione
 
 **Files:**
+
 - `src/tests/TestRepository.ts` (285 lines)
 - `tests/tests/test-overlap.test.ts` (150 lines)
 - `tests/tests/test-modification.test.ts` (160 lines)
@@ -214,24 +239,28 @@
 **Tests:** 12/12 passing (100%) 🎉
 
 #### 5.1 - Concorrenza (4 tests) ✅
+
 - ✅ Gestione 100 richieste simultanee senza deadlock
 - ✅ Isolamento scritture concurrent tra utenti
 - ✅ Prevenzione race conditions su modifiche test
 - ✅ Performance con 50 utenti simultanei
 
 #### 5.2 - Integrità Serie Temporale (4 tests) ✅
+
 - ✅ Rilevamento gap nei dati GSC
 - ✅ Handling aggiornamenti retroattivi Google
 - ✅ Calcolo metriche aggregate accurate
 - ✅ Gestione fusi orari con shift temporali
 
 #### 5.3 - Storage e Performance (4 tests) ✅
+
 - ✅ Paginazione dataset grandi (10k+ test)
 - ✅ Pulizia automatica dati vecchi
 - ✅ Calcolo varianza e confidence intervals
 - ✅ Query time range ottimizzate
 
 **Files:**
+
 - `src/database/DatabaseService.ts` (114 lines)
 - `src/database/TimeSeriesService.ts` (66 lines)
 - `tests/database/database-performance.test.ts` (307 lines)
@@ -245,6 +274,7 @@
 **Tests:** 13/13 passing (100%) 🎉
 
 #### 6.1 - Alert Vittoria (6 tests) ✅
+
 - ✅ Invio solo per risultati significativi (p < 0.05)
 - ✅ Prevenzione alert fatigue (>= 5% improvement)
 - ✅ Generazione email formato chiaro
@@ -253,6 +283,7 @@
 - ✅ NO notifica per miglioramenti minimi
 
 #### 6.2 - Report Settimanale (7 tests) ✅
+
 - ✅ Aggregazione test attivi in digest singolo
 - ✅ Sezione per ogni test
 - ✅ Azioni consigliate per stato test
@@ -262,6 +293,7 @@
 - ✅ NO invio se nessun test attivo
 
 **Files:**
+
 - `src/notifications/NotificationService.ts` (175 lines)
 - `src/notifications/EmailService.ts` (66 lines)
 - `tests/notifications/notification-service.test.ts` (327 lines)
@@ -275,6 +307,7 @@
 **Tests:** 22/22 passing (100%) 🎉
 
 #### 7.1 - URL Redirect (7 tests) ✅
+
 - ✅ Rilevamento redirect 301 durante test
 - ✅ Sospensione per redirect permanenti (301)
 - ✅ Gestione redirect temporanei (302)
@@ -284,6 +317,7 @@
 - ✅ Tracking cronologia redirect
 
 #### 7.2 - Cambio Dominio (7 tests) ✅
+
 - ✅ Rilevamento HTTP → HTTPS
 - ✅ Rilevamento domain property → URL prefix
 - ✅ Suggerimento unione dati
@@ -293,6 +327,7 @@
 - ✅ Gestione cambio subdomain (www vs non-www)
 
 #### 7.3 - Sito Morto (8 tests) ✅
+
 - ✅ Rilevamento zero traffic 7+ giorni
 - ✅ Sospensione test quando offline
 - ✅ Generazione alert critico
@@ -303,6 +338,7 @@
 - ✅ Tracking downtime per statistiche
 
 **Files:**
+
 - `src/monitoring/URLMonitoringService.ts` (252 lines)
 - `src/monitoring/DomainMigrationService.ts` (340 lines)
 - `src/monitoring/TrafficMonitoringService.ts` (327 lines)
@@ -317,6 +353,7 @@
 **Tests:** 21/21 passing (100%) 🎉
 
 #### 8.1 - Caricamento Infinito (6 tests) ✅
+
 - ✅ Progress bar per fetch lungo (30s)
 - ✅ Messaggi descrittivi durante caricamento
 - ✅ Aggiornamento percentuale progressivo (0% → 100%)
@@ -325,6 +362,7 @@
 - ✅ Spinner per operazioni senza percentuale
 
 #### 8.2 - Mobile (7 tests) ✅
+
 - ✅ Grafici responsive viewport mobile (375px)
 - ✅ Testo leggibile mobile (min 14px)
 - ✅ Supporto touch interactions (pinch-to-zoom)
@@ -334,6 +372,7 @@
 - ✅ Performance mobile (< 3s caricamento)
 
 #### 8.3 - Esportazione (8 tests) ✅
+
 - ✅ Dati export identici a UI (CRITICO)
 - ✅ PDF con numeri identici
 - ✅ NO discrepanze decimali (precisione 4)
@@ -344,6 +383,7 @@
 - ✅ Metadata nel file esportato
 
 **Files:**
+
 - `src/ui/LoadingIndicatorService.ts` (144 lines)
 - `src/ui/ResponsiveLayoutService.ts` (144 lines)
 - `src/ui/ExportService.ts` (158 lines)
@@ -364,6 +404,7 @@
 - ✅ DI pattern con `OrchestratorDeps` interface
 
 **Files:**
+
 - `src/orchestrator/SEOExperimentOrchestrator.ts`
 - `src/index.ts` (entry point cron job)
 - `tests/orchestrator/experiment-orchestrator.test.ts` (14 tests)
@@ -377,6 +418,7 @@
 **Tests:** 10/10 passing (100%) 🎉
 
 #### 10.1 - Comandi Base (5 comandi) ✅
+
 - ✅ `seo-tool add` — Prompt interattivo creazione test
 - ✅ `seo-tool list` — Tabella test con colori (cli-table3 + chalk)
 - ✅ `seo-tool status <id>` — Dettaglio + analisi statistica + grafico ASCII
@@ -384,6 +426,7 @@
 - ✅ `seo-tool export <id>` — Export CSV con metriche
 
 #### 10.2 - Comando Delete (10 tests) ✅
+
 - ✅ Eliminazione per ID esatto con conferma "s"
 - ✅ Ricerca per ID parziale
 - ✅ Gestione ambiguità (più match)
@@ -396,6 +439,7 @@
 - ✅ Cascade delete metriche (onDelete: Cascade)
 
 **Files:**
+
 - `src/cli.ts` — Entry point commander (6 comandi, v1.0.0)
 - `src/cli/commands.ts` — 6 comandi: add, list, status, run, export, delete
 - `src/cli/formatters.ts` — Colori, tabelle, grafici ASCII (asciichart)
@@ -416,6 +460,7 @@
 - ✅ `README.md` — Istruzioni installazione globale e deploy
 
 **Files:**
+
 - `railway.json`
 - `Dockerfile`
 - `src/smoke-test.ts`
@@ -493,20 +538,20 @@ TOTAL: 22 source files + 19 test files
 
 ## 📊 Coverage by Section
 
-| Section | Priority | Tests | Passing | Status | Complete |
-|---------|----------|-------|---------|--------|----------|
-| **1. Autenticazione** | CRITICA | 47 | 47 (100%) | 🟢 Completa | 100% |
-| **2. Ingestione Dati** | CRITICA | 14 | 14 (100%) | 🟢 Completa | 100% |
-| **3. Motore Statistico** | CRITICA | 52 | 51 (98%) | 🟢 Completa | 100% |
-| **4. Gestione Esperimenti** | ALTA | 21 | 21 (100%) | 🟢 Completa | 100% |
-| **5. Database & Performance** | ALTA | 12 | 12 (100%) | 🟢 Completa | 100% |
-| **6. Notifiche & Automazione** | ALTA | 13 | 13 (100%) | 🟢 Completa | 100% |
-| **7. Casi Estremi** | ALTA | 22 | 22 (100%) | 🟢 Completa | 100% |
-| **8. UI/UX** | CRITICA | 21 | 21 (100%) | 🟢 Completa | 100% |
-| **9. Orchestratore** | CRITICA | 14 | 14 (100%) | 🟢 Completa | 100% |
-| **10. CLI Interface** | ALTA | 10 | 10 (100%) | 🟢 Completa | 100% |
-| **11. Deploy & Infra** | MEDIA | — | — | 🟢 Completa | 100% |
-| **12. Integration Tests** | MEDIA | 11 | 8 (72.7%) | 🟡 Partial | 75% |
+| Section                        | Priority | Tests | Passing   | Status      | Complete |
+| ------------------------------ | -------- | ----- | --------- | ----------- | -------- |
+| **1. Autenticazione**          | CRITICA  | 47    | 47 (100%) | 🟢 Completa | 100%     |
+| **2. Ingestione Dati**         | CRITICA  | 14    | 14 (100%) | 🟢 Completa | 100%     |
+| **3. Motore Statistico**       | CRITICA  | 52    | 51 (98%)  | 🟢 Completa | 100%     |
+| **4. Gestione Esperimenti**    | ALTA     | 21    | 21 (100%) | 🟢 Completa | 100%     |
+| **5. Database & Performance**  | ALTA     | 12    | 12 (100%) | 🟢 Completa | 100%     |
+| **6. Notifiche & Automazione** | ALTA     | 13    | 13 (100%) | 🟢 Completa | 100%     |
+| **7. Casi Estremi**            | ALTA     | 22    | 22 (100%) | 🟢 Completa | 100%     |
+| **8. UI/UX**                   | CRITICA  | 21    | 21 (100%) | 🟢 Completa | 100%     |
+| **9. Orchestratore**           | CRITICA  | 14    | 14 (100%) | 🟢 Completa | 100%     |
+| **10. CLI Interface**          | ALTA     | 10    | 10 (100%) | 🟢 Completa | 100%     |
+| **11. Deploy & Infra**         | MEDIA    | —     | —         | 🟢 Completa | 100%     |
+| **12. Integration Tests**      | MEDIA    | 11    | 8 (72.7%) | 🟡 Partial  | 75%      |
 
 **TOTALE:** 237 tests = 231 passing + 2 failing + 4 skipped
 **OVERALL PASS RATE:** 97.5%
@@ -526,14 +571,14 @@ TOTAL: 22 source files + 19 test files
 
 ### ✅ Tests Fixed in Session 2026-02-10
 
-| Issue | File | Fix Applied |
-|-------|------|-------------|
-| GSC Permissions (3 tests) | `gsc-permissions.test.ts` | Were already passing, PROGRESS.md was outdated |
-| Batch retry (L.247) | `gsc-data-fetcher.test.ts` | Mock error trigger moved to reachable batch (batch 3 instead of 15) |
-| Batch parallel (L.316) | `gsc-data-fetcher.test.ts` | Added `totalRows` to mock response + relaxed timing threshold |
-| Rate limit unhandled | `gsc-data-fetcher.test.ts` | Rejection handler attached before advancing fake timers |
-| Multi-tenancy (L.217) | `multi-tenancy.test.ts` | Check `supportsSharing` before calling `checkTestAccess()` |
-| Test deletion (L.43) | `test-deletion.test.ts` | Added `{ confirm: true }` to `deleteTest()` call |
+| Issue                     | File                       | Fix Applied                                                         |
+| ------------------------- | -------------------------- | ------------------------------------------------------------------- |
+| GSC Permissions (3 tests) | `gsc-permissions.test.ts`  | Were already passing, PROGRESS.md was outdated                      |
+| Batch retry (L.247)       | `gsc-data-fetcher.test.ts` | Mock error trigger moved to reachable batch (batch 3 instead of 15) |
+| Batch parallel (L.316)    | `gsc-data-fetcher.test.ts` | Added `totalRows` to mock response + relaxed timing threshold       |
+| Rate limit unhandled      | `gsc-data-fetcher.test.ts` | Rejection handler attached before advancing fake timers             |
+| Multi-tenancy (L.217)     | `multi-tenancy.test.ts`    | Check `supportsSharing` before calling `checkTestAccess()`          |
+| Test deletion (L.43)      | `test-deletion.test.ts`    | Added `{ confirm: true }` to `deleteTest()` call                    |
 
 ---
 
@@ -542,18 +587,21 @@ TOTAL: 22 source files + 19 test files
 ### ✅ Completed Features
 
 **Authentication & Security:**
+
 - OAuth2 flow with CSRF protection
 - Token refresh automation
 - Multi-tenancy with strict isolation
 - Access revocation detection
 
 **Data Processing:**
+
 - Exponential backoff for rate limiting
 - Gap detection for missing GSC data
 - Timezone alignment (PST ↔ UTC+1)
 - DST (Daylight Saving Time) handling
 
 **Statistical Engine:**
+
 - Chi-squared test for significance
 - P-value calculation (threshold: 0.05)
 - Outlier detection (IQR method)
@@ -561,36 +609,42 @@ TOTAL: 22 source files + 19 test files
 - Control group comparison
 
 **Test Management:**
+
 - Overlap prevention (same user)
 - Modification with data loss warnings
 - Deletion with GDPR compliance
 - Audit logging
 
 **Database & Performance:**
+
 - Concurrency control (100 simultaneous requests)
 - Time series integrity with gap recovery
 - Pagination for large datasets
 - Automatic data cleanup
 
 **Notifications:**
+
 - Victory alerts (p < 0.05, improvement >= 5%)
 - Weekly digests with prioritization
 - Alert fatigue prevention
 - Duplicate notification tracking
 
 **Edge Case Handling:**
+
 - URL redirect detection (301/302)
 - Domain migration (HTTP→HTTPS)
 - Zero traffic detection (7+ days)
 - Site downtime tracking
 
 **UI/UX:**
+
 - Progress indicators with percentages
 - Mobile-first responsive design
 - Export data integrity (CSV/PDF/Excel)
 - Touch interactions support
 
 **CLI Interface (v1.0.0):**
+
 - 6 comandi: add, list, status, run, export, delete
 - ID parziale su tutti i comandi con argomento <id>
 - Conferma interattiva per delete con info test
@@ -598,6 +652,7 @@ TOTAL: 22 source files + 19 test files
 - Colori (chalk), tabelle (cli-table3), grafici ASCII (asciichart)
 
 **Deploy & Infrastructure:**
+
 - Railway cron job (03:00 UTC nightly)
 - Dockerfile Node.js 18 Alpine
 - Smoke test per verifica connessione DB
@@ -609,15 +664,15 @@ TOTAL: 22 source files + 19 test files
 
 ### Session Timeline
 
-| Date | Focus | Tests Added | Status |
-|------|-------|-------------|--------|
-| **Feb 6, 2026** | Auth & OAuth | 18 | Initial TDD |
-| **Feb 7, 2026** | GSC Integration | 15 | Data Ingestion |
-| **Feb 9, 2026 (AM)** | Statistics & Tests | 40 | Core Engine |
-| **Feb 9, 2026 (PM)** | Database & UI/UX | 68 | Polish & Edge Cases |
-| **Feb 10, 2026 (AM)** | Test fixes & cleanup | 0 (7 fixed) | 92.8% → 96.7% |
-| **Feb 10, 2026 (PM)** | Orchestrator + CLI | 24 | Orchestratore, 5 comandi CLI |
-| **Feb 10, 2026 (Night)** | Delete + Deploy v1.0.0 | 10 | Delete cmd, Railway, Dockerfile, smoke test |
+| Date                     | Focus                  | Tests Added | Status                                      |
+| ------------------------ | ---------------------- | ----------- | ------------------------------------------- |
+| **Feb 6, 2026**          | Auth & OAuth           | 18          | Initial TDD                                 |
+| **Feb 7, 2026**          | GSC Integration        | 15          | Data Ingestion                              |
+| **Feb 9, 2026 (AM)**     | Statistics & Tests     | 40          | Core Engine                                 |
+| **Feb 9, 2026 (PM)**     | Database & UI/UX       | 68          | Polish & Edge Cases                         |
+| **Feb 10, 2026 (AM)**    | Test fixes & cleanup   | 0 (7 fixed) | 92.8% → 96.7%                               |
+| **Feb 10, 2026 (PM)**    | Orchestrator + CLI     | 24          | Orchestratore, 5 comandi CLI                |
+| **Feb 10, 2026 (Night)** | Delete + Deploy v1.0.0 | 10          | Delete cmd, Railway, Dockerfile, smoke test |
 
 ---
 
@@ -665,6 +720,7 @@ TOTAL: 22 source files + 19 test files
 ### 📊 Test Verification Summary (2026-02-10)
 
 **Full suite run (`npx vitest run`):**
+
 - ✅ 18/19 test files passing completely (100%)
 - 🟡 1/19 test file with 2 failures (integration tests requiring real Google OAuth)
 

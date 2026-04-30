@@ -1,16 +1,16 @@
 /**
  * Test 1.2 - Scadenza Token
- * 
+ *
  * Priorità: CRITICA
- * 
+ *
  * Obiettivo: Verificare che il sistema usi il refresh token quando l'access token scade
- * 
+ *
  * Scenario: L'access token di Google scade dopo 1 ora
- * 
- * Risultato atteso: Il sistema usa automaticamente il refresh token, 
+ *
+ * Risultato atteso: Il sistema usa automaticamente il refresh token,
  * l'utente non viene disconnesso
- * 
- * Comportamento su fallimento: Richiesta di nuovo login solo se il 
+ *
+ * Comportamento su fallimento: Richiesta di nuovo login solo se il
  * refresh token è revocato
  */
 
@@ -36,7 +36,7 @@ describe('Test 1.2 - Scadenza Token', () => {
     vi.restoreAllMocks();
   });
 
-  it('dovrebbe rilevare che l\'access token è scaduto', () => {
+  it("dovrebbe rilevare che l'access token è scaduto", () => {
     // Arrange: Token scaduto (expires_at nel passato)
     const expiredToken = {
       access_token: 'expired-token',
@@ -53,7 +53,7 @@ describe('Test 1.2 - Scadenza Token', () => {
     expect(isExpired).toBe(true);
   });
 
-  it('dovrebbe rilevare che l\'access token è ancora valido', () => {
+  it("dovrebbe rilevare che l'access token è ancora valido", () => {
     // Arrange: Token valido (expires_at nel futuro)
     const validToken = {
       access_token: 'valid-token',
@@ -84,7 +84,9 @@ describe('Test 1.2 - Scadenza Token', () => {
     mockRefreshAccessToken('success');
 
     // Act: Usiamo il refresh token per ottenere nuovi token
-    const newTokens = await tokenManager.refreshAccessToken(expiredToken.refresh_token);
+    const newTokens = await tokenManager.refreshAccessToken(
+      expiredToken.refresh_token
+    );
 
     // Assert: Dovremmo ricevere un nuovo access token
     expect(newTokens).toBeDefined();
@@ -95,7 +97,7 @@ describe('Test 1.2 - Scadenza Token', () => {
     expect(typeof newTokens.access_token).toBe('string');
   });
 
-  it('dovrebbe calcolare correttamente l\'expires_at quando riceve expires_in', () => {
+  it("dovrebbe calcolare correttamente l'expires_at quando riceve expires_in", () => {
     // Arrange: Token da Google con expires_in (secondi)
     const tokenFromGoogle = {
       access_token: 'new-token',
@@ -113,7 +115,9 @@ describe('Test 1.2 - Scadenza Token', () => {
 
     // Assert: expires_at dovrebbe essere circa now + 3600 secondi
     expect(processedToken.expires_at).toBeDefined();
-    expect(processedToken.expires_at).toBeGreaterThanOrEqual(beforeTime + 3600000);
+    expect(processedToken.expires_at).toBeGreaterThanOrEqual(
+      beforeTime + 3600000
+    );
     expect(processedToken.expires_at).toBeLessThanOrEqual(afterTime + 3600000);
   });
 
@@ -151,7 +155,7 @@ describe('Test 1.2 - Scadenza Token', () => {
     expect(needsRefresh).toBe(false);
   });
 
-  it('dovrebbe gestire l\'errore quando il refresh token è revocato', async () => {
+  it("dovrebbe gestire l'errore quando il refresh token è revocato", async () => {
     // Arrange: Refresh token revocato
     const revokedRefreshToken = 'revoked-refresh-token';
 
@@ -161,19 +165,17 @@ describe('Test 1.2 - Scadenza Token', () => {
     ).rejects.toThrow('Sessione scaduta. Effettua nuovamente il login.');
   });
 
-  it('dovrebbe gestire l\'errore di rete durante il refresh', async () => {
+  it("dovrebbe gestire l'errore di rete durante il refresh", async () => {
     // Arrange: Errore di rete durante il refresh
     const refreshToken = 'valid-refresh-token';
-    
+
     // Mock della chiamata di rete che fallisce
-    vi.spyOn(global, 'fetch').mockRejectedValueOnce(
-      new Error('Network error')
-    );
+    vi.spyOn(global, 'fetch').mockRejectedValueOnce(new Error('Network error'));
 
     // Act & Assert: Dovrebbe lanciare un errore gestito
-    await expect(
-      tokenManager.refreshAccessToken(refreshToken)
-    ).rejects.toThrow('Impossibile rinnovare la sessione. Riprova.');
+    await expect(tokenManager.refreshAccessToken(refreshToken)).rejects.toThrow(
+      'Impossibile rinnovare la sessione. Riprova.'
+    );
   });
 
   it('dovrebbe ottenere un access token valido anche se quello attuale è scaduto', async () => {
@@ -209,7 +211,8 @@ describe('Test 1.2 - Scadenza Token', () => {
     mockRefreshAccessToken('success');
 
     // Act: Rinnoviamo l'access token
-    const newTokens = await tokenManager.refreshAccessToken(originalRefreshToken);
+    const newTokens =
+      await tokenManager.refreshAccessToken(originalRefreshToken);
 
     // Assert: Il refresh token può rimanere lo stesso (comportamento Google)
     // oppure può essere un nuovo refresh token (gestione corretta in entrambi i casi)

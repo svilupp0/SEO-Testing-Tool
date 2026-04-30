@@ -7,7 +7,13 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestDb, seedUser, seedTest, seedMetrics, type TestDB } from '../helpers/test-db';
+import {
+  createTestDb,
+  seedUser,
+  seedTest,
+  seedMetrics,
+  type TestDB,
+} from '../helpers/test-db';
 import { metrics } from '../../src/database/schema';
 
 // ── Mock: readline/promises (usato da prompt() helper) ──────────────────────
@@ -39,12 +45,15 @@ vi.mock('../../src/database/db.js', () => ({
 
 // ── Mock: chalk (passthrough) ───────────────────────────────────────────────
 vi.mock('chalk', () => ({
-  default: new Proxy({}, {
-    get: () => {
-      const fn = (s: unknown) => String(s);
-      return new Proxy(fn, { get: () => fn });
-    },
-  }),
+  default: new Proxy(
+    {},
+    {
+      get: () => {
+        const fn = (s: unknown) => String(s);
+        return new Proxy(fn, { get: () => fn });
+      },
+    }
+  ),
 }));
 
 // ── Mock: formatters ────────────────────────────────────────────────────────
@@ -120,7 +129,7 @@ describe('Comando export', () => {
 
   // ── Export CSV ──────────────────────────────────────────────────────────
 
-  it('genera un file CSV quando l\'utente sceglie csv', async () => {
+  it("genera un file CSV quando l'utente sceglie csv", async () => {
     setupTestWithMetrics();
     mockPrompt.mockResolvedValueOnce({ format: 'csv' });
 
@@ -147,7 +156,7 @@ describe('Comando export', () => {
 
   // ── Export Excel ────────────────────────────────────────────────────────
 
-  it('genera un file Excel quando l\'utente sceglie xlsx', async () => {
+  it("genera un file Excel quando l'utente sceglie xlsx", async () => {
     setupTestWithMetrics();
     mockPrompt.mockResolvedValueOnce({ format: 'xlsx' });
 
@@ -177,7 +186,7 @@ describe('Comando export', () => {
 
     await exportCommand(TEST_ID, { format: 'csv' });
 
-    const output = logSpy.mock.calls.map(c => c.join(' ')).join('\n');
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
     expect(output).toContain('Export completato');
     expect(output).toMatch(/File:.*report_Migrazione_HTTPS/);
     expect(output).toContain('10 giorni');
@@ -189,7 +198,7 @@ describe('Comando export', () => {
 
     await exportCommand(TEST_ID);
 
-    const output = logSpy.mock.calls.map(c => c.join(' ')).join('\n');
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
     expect(output).toContain('Export completato');
     expect(output).toContain('XLSX');
     expect(output).toContain('20 giorni');
@@ -205,7 +214,7 @@ describe('Comando export', () => {
     expect(mockWriteFile).not.toHaveBeenCalled();
     expect(mockPrompt).not.toHaveBeenCalled();
 
-    const output = logSpy.mock.calls.map(c => c.join(' ')).join('\n');
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
     expect(output).toContain('Nessuna metrica disponibile');
     expect(output).toContain('seo-tool run');
   });
@@ -219,7 +228,7 @@ describe('Comando export', () => {
 
     expect(mockWriteFile).not.toHaveBeenCalled();
 
-    const output = logSpy.mock.calls.map(c => c.join(' ')).join('\n');
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
     expect(output).toContain('non trovato');
   });
 

@@ -27,17 +27,22 @@ export const colors = {
 export function colorPValue(p: number | null): string {
   if (p === null) return colors.muted('—');
   if (p < 0.05) return colors.significant(p.toFixed(4));
-  if (p < 0.10) return colors.uncertain(p.toFixed(4));
+  if (p < 0.1) return colors.uncertain(p.toFixed(4));
   return colors.notSignificant(p.toFixed(4));
 }
 
 export function colorStatus(status: string): string {
   switch (status) {
-    case 'completed': return colors.significant(status);
-    case 'running': return colors.uncertain(status);
-    case 'failed': return colors.error(status);
-    case 'paused': return colors.muted(status);
-    default: return status;
+    case 'completed':
+      return colors.significant(status);
+    case 'running':
+      return colors.uncertain(status);
+    case 'failed':
+      return colors.error(status);
+    case 'paused':
+      return colors.muted(status);
+    default:
+      return status;
   }
 }
 
@@ -84,7 +89,10 @@ export function formatTestTable(tests: any[]): string {
   return table.toString();
 }
 
-export function formatStatusDetail(test: any, analysis: AnalysisResult): string {
+export function formatStatusDetail(
+  test: any,
+  analysis: AnalysisResult
+): string {
   const lines: string[] = [];
   const divider = colors.muted('─'.repeat(50));
 
@@ -94,8 +102,12 @@ export function formatStatusDetail(test: any, analysis: AnalysisResult): string 
   lines.push(`  ${colors.muted('ID:')}          ${test.id}`);
   lines.push(`  ${colors.muted('Sito:')}        ${test.siteUrl}`);
   lines.push(`  ${colors.muted('Stato:')}       ${colorStatus(test.status)}`);
-  lines.push(`  ${colors.muted('Inizio:')}      ${new Date(test.startDate).toLocaleDateString('it-IT')}`);
-  lines.push(`  ${colors.muted('Split Date:')}  ${new Date(test.splitDate).toLocaleDateString('it-IT')}`);
+  lines.push(
+    `  ${colors.muted('Inizio:')}      ${new Date(test.startDate).toLocaleDateString('it-IT')}`
+  );
+  lines.push(
+    `  ${colors.muted('Split Date:')}  ${new Date(test.splitDate).toLocaleDateString('it-IT')}`
+  );
   lines.push('');
   lines.push(colors.header('  Analisi Statistica'));
   lines.push(divider);
@@ -107,16 +119,25 @@ export function formatStatusDetail(test: any, analysis: AnalysisResult): string 
       : colors.muted('Non significativo');
 
   lines.push(`  ${colors.muted('Risultato:')}   ${sigLabel}`);
-  lines.push(`  ${colors.muted('p-Value:')}     ${colorPValue(analysis.pValue)}`);
+  lines.push(
+    `  ${colors.muted('p-Value:')}     ${colorPValue(analysis.pValue)}`
+  );
 
-  const arrow = analysis.percentageChange >= 0 ? chalk.green('↑') : chalk.red('↓');
-  lines.push(`  ${colors.muted('Variazione:')}  ${arrow} ${colorImprovement(analysis.percentageChange)}`);
+  const arrow =
+    analysis.percentageChange >= 0 ? chalk.green('↑') : chalk.red('↓');
+  lines.push(
+    `  ${colors.muted('Variazione:')}  ${arrow} ${colorImprovement(analysis.percentageChange)}`
+  );
 
   if (analysis.tStatistic !== undefined) {
-    lines.push(`  ${colors.muted('t-Statistic:')} ${colors.value(analysis.tStatistic.toFixed(4))}`);
+    lines.push(
+      `  ${colors.muted('t-Statistic:')} ${colors.value(analysis.tStatistic.toFixed(4))}`
+    );
   }
   if (analysis.degreesOfFreedom !== undefined) {
-    lines.push(`  ${colors.muted('Gradi lib.:')}  ${colors.value(analysis.degreesOfFreedom.toFixed(1))}`);
+    lines.push(
+      `  ${colors.muted('Gradi lib.:')}  ${colors.value(analysis.degreesOfFreedom.toFixed(1))}`
+    );
   }
 
   lines.push('');
@@ -126,18 +147,32 @@ export function formatStatusDetail(test: any, analysis: AnalysisResult): string 
   // Calcola medie
   const beforeClicks = test._beforeClicks as number[] | undefined;
   const afterClicks = test._afterClicks as number[] | undefined;
-  const meanBefore = beforeClicks && beforeClicks.length > 0
-    ? (beforeClicks.reduce((a: number, b: number) => a + b, 0) / beforeClicks.length).toFixed(1)
-    : '—';
-  const meanAfter = afterClicks && afterClicks.length > 0
-    ? (afterClicks.reduce((a: number, b: number) => a + b, 0) / afterClicks.length).toFixed(1)
-    : '—';
+  const meanBefore =
+    beforeClicks && beforeClicks.length > 0
+      ? (
+          beforeClicks.reduce((a: number, b: number) => a + b, 0) /
+          beforeClicks.length
+        ).toFixed(1)
+      : '—';
+  const meanAfter =
+    afterClicks && afterClicks.length > 0
+      ? (
+          afterClicks.reduce((a: number, b: number) => a + b, 0) /
+          afterClicks.length
+        ).toFixed(1)
+      : '—';
 
-  lines.push(`  ${colors.muted('Before:')}      ${colors.value(meanBefore)} media clicks  (${beforeClicks?.length ?? 0} giorni)`);
-  lines.push(`  ${colors.muted('After:')}       ${colors.value(meanAfter)} media clicks  (${afterClicks?.length ?? 0} giorni)`);
+  lines.push(
+    `  ${colors.muted('Before:')}      ${colors.value(meanBefore)} media clicks  (${beforeClicks?.length ?? 0} giorni)`
+  );
+  lines.push(
+    `  ${colors.muted('After:')}       ${colors.value(meanAfter)} media clicks  (${afterClicks?.length ?? 0} giorni)`
+  );
 
   if (analysis.outliersDetected) {
-    lines.push(`  ${colors.uncertain(`Outlier rilevati: ${analysis.outliers.length}`)}`);
+    lines.push(
+      `  ${colors.uncertain(`Outlier rilevati: ${analysis.outliers.length}`)}`
+    );
   }
   if (analysis.seasonalityDetected) {
     lines.push(`  ${colors.info('Stagionalità rilevata (periodo 7 giorni)')}`);
@@ -150,14 +185,19 @@ export function formatStatusDetail(test: any, analysis: AnalysisResult): string 
 // --- Grafici ---
 
 export function renderClicksChart(metrics: any[], splitDate: Date): string {
-  if (metrics.length === 0) return colors.muted('  Nessun dato disponibile per il grafico.');
+  if (metrics.length === 0)
+    return colors.muted('  Nessun dato disponibile per il grafico.');
 
-  const sorted = [...metrics].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const sorted = [...metrics].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
   const clicks = sorted.map((m: any) => m.clicks);
 
   // Trova indice splitDate
   const splitTime = splitDate.getTime();
-  let splitIndex = sorted.findIndex((m: any) => new Date(m.date).getTime() >= splitTime);
+  let splitIndex = sorted.findIndex(
+    (m: any) => new Date(m.date).getTime() >= splitTime
+  );
   if (splitIndex === -1) splitIndex = sorted.length;
 
   const chartHeight = Math.min(12, Math.max(4, clicks.length > 0 ? 8 : 4));
@@ -184,16 +224,21 @@ export function renderClicksChart(metrics: any[], splitDate: Date): string {
   if (splitIndex > 0 && splitIndex < sorted.length) {
     const markerPos = chartOffset + splitIndex;
     const markerLine = ' '.repeat(markerPos) + chalk.yellow('▲');
-    const labelLine = ' '.repeat(Math.max(0, markerPos - 5)) + chalk.yellow('Split Date');
+    const labelLine =
+      ' '.repeat(Math.max(0, markerPos - 5)) + chalk.yellow('Split Date');
     lines.push('  ' + markerLine);
     lines.push('  ' + labelLine);
   }
 
   // Asse X: prima e ultima data
   const firstDate = new Date(sorted[0].date).toLocaleDateString('it-IT');
-  const lastDate = new Date(sorted[sorted.length - 1].date).toLocaleDateString('it-IT');
+  const lastDate = new Date(sorted[sorted.length - 1].date).toLocaleDateString(
+    'it-IT'
+  );
   lines.push('');
-  lines.push(`  ${colors.muted(firstDate)}${' '.repeat(Math.max(2, 40 - firstDate.length - lastDate.length))}${colors.muted(lastDate)}`);
+  lines.push(
+    `  ${colors.muted(firstDate)}${' '.repeat(Math.max(2, 40 - firstDate.length - lastDate.length))}${colors.muted(lastDate)}`
+  );
   lines.push('');
 
   return lines.join('\n');

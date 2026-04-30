@@ -2,7 +2,11 @@
  * GSCPermissionService - Gestione permessi Google Search Console
  */
 
-type PermissionLevel = 'siteOwner' | 'siteFullUser' | 'siteRestrictedUser' | 'siteUnverifiedUser';
+type PermissionLevel =
+  | 'siteOwner'
+  | 'siteFullUser'
+  | 'siteRestrictedUser'
+  | 'siteUnverifiedUser';
 
 interface PropertyInfo {
   url: string;
@@ -10,10 +14,16 @@ interface PropertyInfo {
 }
 
 export class GSCPermissionService {
-  private permissionCache: Map<string, { level: PermissionLevel; timestamp: number }> = new Map();
+  private permissionCache: Map<
+    string,
+    { level: PermissionLevel; timestamp: number }
+  > = new Map();
   private readonly CACHE_TTL = 300000; // 5 minuti
 
-  async checkPropertyAccess(accessToken: string, propertyUrl: string): Promise<boolean> {
+  async checkPropertyAccess(
+    accessToken: string,
+    propertyUrl: string
+  ): Promise<boolean> {
     // Controlla cache
     const cached = this.permissionCache.get(propertyUrl);
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
@@ -35,15 +45,19 @@ export class GSCPermissionService {
       }
 
       if (response.status === 403) {
-        throw new Error('Non hai accesso a questa proprietà su Google Search Console.');
+        throw new Error(
+          'Non hai accesso a questa proprietà su Google Search Console.'
+        );
       }
 
       if (!response.ok) {
         throw new Error('Errore durante la verifica dei permessi.');
       }
 
-      const data = (await response.json()) as { permissionLevel: PermissionLevel };
-      
+      const data = (await response.json()) as {
+        permissionLevel: PermissionLevel;
+      };
+
       // Salva in cache
       this.permissionCache.set(propertyUrl, {
         level: data.permissionLevel,
@@ -60,11 +74,14 @@ export class GSCPermissionService {
   }
 
   async listAvailableProperties(accessToken: string): Promise<PropertyInfo[]> {
-    const response = await fetch('https://www.googleapis.com/webmasters/v3/sites', {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    const response = await fetch(
+      'https://www.googleapis.com/webmasters/v3/sites',
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
     if (!response.ok) {
       throw new Error('Errore durante il recupero delle proprietà.');
@@ -104,7 +121,9 @@ export class GSCPermissionService {
       throw new Error('Errore durante il recupero del livello di permesso.');
     }
 
-    const data = (await response.json()) as { permissionLevel: PermissionLevel };
+    const data = (await response.json()) as {
+      permissionLevel: PermissionLevel;
+    };
     return data.permissionLevel;
   }
 

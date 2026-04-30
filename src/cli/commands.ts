@@ -11,10 +11,20 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { eq, like, desc, count } from 'drizzle-orm';
 import { db } from '../database/db.js';
-import { users, tests, metrics, auditLogs, oauthTokens } from '../database/schema.js';
+import {
+  users,
+  tests,
+  metrics,
+  auditLogs,
+  oauthTokens,
+} from '../database/schema.js';
 import { StatisticalEngine } from '../stats/StatisticalEngine.js';
 import { SEOExperimentOrchestrator } from '../orchestrator/SEOExperimentOrchestrator.js';
-import { ReportExportService, type MetricRow, type ExportInput } from '../services/ExportService.js';
+import {
+  ReportExportService,
+  type MetricRow,
+  type ExportInput,
+} from '../services/ExportService.js';
 import { GoogleOAuthService } from '../auth/GoogleOAuthService.js';
 import { TokenManager } from '../auth/TokenManager.js';
 import { getGoogleOAuthConfig } from '../config/env.js';
@@ -29,11 +39,16 @@ import {
 
 // --- Helpers ---
 
-async function prompt(question: string, defaultValue?: string): Promise<string> {
+async function prompt(
+  question: string,
+  defaultValue?: string
+): Promise<string> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const suffix = defaultValue ? ` ${colors.muted(`[${defaultValue}]`)} ` : ' ';
   try {
-    const answer = await rl.question(`${colors.info('?')} ${question}${suffix}`);
+    const answer = await rl.question(
+      `${colors.info('?')} ${question}${suffix}`
+    );
     return answer.trim() || defaultValue || '';
   } finally {
     rl.close();
@@ -54,12 +69,20 @@ function findTestById(id: string) {
   if (exact) return exact;
 
   // Prova con ID parziale
-  const candidates = db.select().from(tests).where(like(tests.id, `${id}%`)).all();
+  const candidates = db
+    .select()
+    .from(tests)
+    .where(like(tests.id, `${id}%`))
+    .all();
 
   if (candidates.length === 1) return candidates[0];
 
   if (candidates.length > 1) {
-    console.log(colors.uncertain(`  Trovati ${candidates.length} test con ID che inizia per "${id}":`));
+    console.log(
+      colors.uncertain(
+        `  Trovati ${candidates.length} test con ID che inizia per "${id}":`
+      )
+    );
     for (const c of candidates) {
       console.log(`    ${colors.muted(c.id.substring(0, 8))} ${c.name}`);
     }
@@ -92,21 +115,32 @@ export async function loginCommand(): Promise<void> {
     // Genera URL di autenticazione
     const authUrl = oauthService.getAuthorizationUrl(oauthConfig.scopes);
 
-    console.log(colors.info('  \uD83D\uDD10 Per collegare il tuo account Google, apri questo URL nel browser:'));
+    console.log(
+      colors.info(
+        '  \uD83D\uDD10 Per collegare il tuo account Google, apri questo URL nel browser:'
+      )
+    );
     console.log('');
     console.log(`  ${chalk.underline(authUrl)}`);
     console.log('');
-    console.log(colors.muted('  Dopo il login, Google ti mostrerà un Codice di Autorizzazione.'));
+    console.log(
+      colors.muted(
+        '  Dopo il login, Google ti mostrerà un Codice di Autorizzazione.'
+      )
+    );
     console.log(colors.muted('  Copialo e incollalo qui sotto.'));
     console.log('');
 
     // Chiedi il codice di autorizzazione
-    const { code } = await inquirer.prompt([{
-      type: 'input',
-      name: 'code',
-      message: 'Incolla il Codice di Autorizzazione:',
-      validate: (input: string) => input.trim().length > 0 || 'Il codice è obbligatorio.',
-    }]);
+    const { code } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'code',
+        message: 'Incolla il Codice di Autorizzazione:',
+        validate: (input: string) =>
+          input.trim().length > 0 || 'Il codice è obbligatorio.',
+      },
+    ]);
 
     console.log('');
     console.log(colors.muted('  Scambio codice in corso...'));
@@ -118,14 +152,24 @@ export async function loginCommand(): Promise<void> {
     const userId = process.env['USER_ID'] || 'default-user';
 
     // Assicurati che l'utente esista
-    const existingUser = db.select().from(users).where(eq(users.id, userId)).get();
+    const existingUser = db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .get();
     if (!existingUser) {
-      db.insert(users).values({ id: userId, email: `${userId}@seo-tool.local` }).run();
+      db.insert(users)
+        .values({ id: userId, email: `${userId}@seo-tool.local` })
+        .run();
     }
 
     // Salva (o aggiorna) i token nel database
     const expiresAt = Date.now() + tokenResponse.expires_in * 1000;
-    const existing = db.select().from(oauthTokens).where(eq(oauthTokens.userId, userId)).get();
+    const existing = db
+      .select()
+      .from(oauthTokens)
+      .where(eq(oauthTokens.userId, userId))
+      .get();
 
     if (existing) {
       db.update(oauthTokens)
@@ -138,29 +182,41 @@ export async function loginCommand(): Promise<void> {
         .where(eq(oauthTokens.userId, userId))
         .run();
     } else {
-      db.insert(oauthTokens).values({
-        userId,
-        accessToken: tokenResponse.access_token,
-        refreshToken: tokenResponse.refresh_token,
-        expiresAt,
-      }).run();
+      db.insert(oauthTokens)
+        .values({
+          userId,
+          accessToken: tokenResponse.access_token,
+          refreshToken: tokenResponse.refresh_token,
+          expiresAt,
+        })
+        .run();
     }
 
     // Registra nell'audit log
-    db.insert(auditLogs).values({
-      testId: 'system',
-      action: 'user_login',
-      userId,
-    }).run();
+    db.insert(auditLogs)
+      .values({
+        testId: 'system',
+        action: 'user_login',
+        userId,
+      })
+      .run();
 
     console.log('');
-    console.log(colors.success('  \u2705 Login effettuato! Ora puoi lanciare \'seo-tool run\' per scaricare i dati.'));
+    console.log(
+      colors.success(
+        "  \u2705 Login effettuato! Ora puoi lanciare 'seo-tool run' per scaricare i dati."
+      )
+    );
     console.log('');
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     if (msg.includes('Google OAuth credentials not configured')) {
       console.log(colors.error('  Credenziali Google non configurate.'));
-      console.log(colors.muted('  Crea un file .env con GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET.'));
+      console.log(
+        colors.muted(
+          '  Crea un file .env con GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET.'
+        )
+      );
       console.log(colors.muted('  Vedi .env.example per un esempio.'));
     } else {
       console.log(colors.error(`  Errore: ${msg}`));
@@ -187,20 +243,33 @@ export async function addCommand(): Promise<void> {
 
     const siteUrl = await prompt('Proprietà GSC (es. sc-domain:example.com):');
     if (!siteUrl) {
-      console.log(colors.error('  Proprietà GSC obbligatoria. Operazione annullata.'));
+      console.log(
+        colors.error('  Proprietà GSC obbligatoria. Operazione annullata.')
+      );
       return;
     }
 
     const urlsInput = await prompt('URL da monitorare (separati da virgola):');
-    const urls = urlsInput.split(',').map(u => u.trim()).filter(Boolean);
+    const urls = urlsInput
+      .split(',')
+      .map((u) => u.trim())
+      .filter(Boolean);
     if (urls.length === 0) {
-      console.log(colors.error('  Almeno un URL necessario. Operazione annullata.'));
+      console.log(
+        colors.error('  Almeno un URL necessario. Operazione annullata.')
+      );
       return;
     }
 
     const splitDateStr = await prompt('Split Date (YYYY-MM-DD):', today());
-    const startDateStr = await prompt('Data inizio raccolta (YYYY-MM-DD):', '2024-01-01');
-    const userId = await prompt('User ID:', process.env['USER_ID'] || 'default-user');
+    const startDateStr = await prompt(
+      'Data inizio raccolta (YYYY-MM-DD):',
+      '2024-01-01'
+    );
+    const userId = await prompt(
+      'User ID:',
+      process.env['USER_ID'] || 'default-user'
+    );
 
     // Validazione date
     const splitDate = new Date(splitDateStr);
@@ -211,28 +280,42 @@ export async function addCommand(): Promise<void> {
     }
 
     // Verifica che l'utente esista, altrimenti crealo
-    const existingUser = db.select().from(users).where(eq(users.id, userId)).get();
+    const existingUser = db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .get();
     if (!existingUser) {
-      db.insert(users).values({ id: userId, email: `${userId}@seo-tool.local` }).run();
+      db.insert(users)
+        .values({ id: userId, email: `${userId}@seo-tool.local` })
+        .run();
     }
 
     // Crea il test
-    const test = db.insert(tests).values({
-      name,
-      siteUrl,
-      urls: JSON.stringify(urls),
-      startDate: startDate.toISOString(),
-      splitDate: splitDate.toISOString(),
-      status: 'running',
-      userId,
-    }).returning().get();
+    const test = db
+      .insert(tests)
+      .values({
+        name,
+        siteUrl,
+        urls: JSON.stringify(urls),
+        startDate: startDate.toISOString(),
+        splitDate: splitDate.toISOString(),
+        status: 'running',
+        userId,
+      })
+      .returning()
+      .get();
 
     console.log('');
     console.log(colors.success(`  Test creato con successo!`));
     console.log(`  ${colors.muted('ID:')} ${test.id}`);
     console.log('');
   } catch (error) {
-    console.error(colors.error(`  Errore: ${error instanceof Error ? error.message : error}`));
+    console.error(
+      colors.error(
+        `  Errore: ${error instanceof Error ? error.message : error}`
+      )
+    );
   }
 }
 
@@ -241,12 +324,20 @@ export async function addCommand(): Promise<void> {
  */
 export async function listCommand(): Promise<void> {
   try {
-    const allTests = db.select().from(tests).orderBy(desc(tests.createdAt)).all();
+    const allTests = db
+      .select()
+      .from(tests)
+      .orderBy(desc(tests.createdAt))
+      .all();
 
     console.log('');
 
     if (allTests.length === 0) {
-      console.log(colors.muted('  Nessun test trovato. Usa "seo-tool add" per crearne uno.'));
+      console.log(
+        colors.muted(
+          '  Nessun test trovato. Usa "seo-tool add" per crearne uno.'
+        )
+      );
       console.log('');
       return;
     }
@@ -256,7 +347,11 @@ export async function listCommand(): Promise<void> {
     console.log(formatTestTable(allTests));
     console.log('');
   } catch (error) {
-    console.error(colors.error(`  Errore: ${error instanceof Error ? error.message : error}`));
+    console.error(
+      colors.error(
+        `  Errore: ${error instanceof Error ? error.message : error}`
+      )
+    );
   }
 }
 
@@ -308,19 +403,25 @@ export async function statusCommand(id: string): Promise<void> {
       console.log(renderClicksChart(testMetrics, new Date(test.splitDate)));
 
       // Bonus: proponi export
-      const { wantExport } = await inquirer.prompt([{
-        type: 'confirm',
-        name: 'wantExport',
-        message: 'Vuoi esportare questi dati ora?',
-        default: false,
-      }]);
+      const { wantExport } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'wantExport',
+          message: 'Vuoi esportare questi dati ora?',
+          default: false,
+        },
+      ]);
 
       if (wantExport) {
         await exportCommand(test.id);
       }
     }
   } catch (error) {
-    console.error(colors.error(`  Errore: ${error instanceof Error ? error.message : error}`));
+    console.error(
+      colors.error(
+        `  Errore: ${error instanceof Error ? error.message : error}`
+      )
+    );
   }
 }
 
@@ -347,12 +448,17 @@ export async function runCommand(): Promise<void> {
     const savedTokens = db.select().from(oauthTokens).all();
     if (savedTokens.length === 0) {
       console.log(colors.error('  Nessun account Google collegato.'));
-      console.log(colors.muted('  Esegui prima "seo-tool login" per autenticarti.'));
+      console.log(
+        colors.muted('  Esegui prima "seo-tool login" per autenticarti.')
+      );
       console.log('');
       return;
     }
     for (const t of savedTokens) {
-      const remainingSeconds = Math.max(0, Math.floor((t.expiresAt - Date.now()) / 1000));
+      const remainingSeconds = Math.max(
+        0,
+        Math.floor((t.expiresAt - Date.now()) / 1000)
+      );
       await tokenManager.saveTokens(t.userId, {
         access_token: t.accessToken,
         refresh_token: t.refreshToken,
@@ -372,10 +478,14 @@ export async function runCommand(): Promise<void> {
 
     // Risultati per ogni test
     for (const r of result.results) {
-      const icon = r.isSignificant ? chalk.green('\u2714') : chalk.yellow('\u25CB');
+      const icon = r.isSignificant
+        ? chalk.green('\u2714')
+        : chalk.yellow('\u25CB');
       const pStr = r.pValue !== null ? `p=${r.pValue.toFixed(4)}` : '';
       const changeStr = colorImprovement(r.percentageChange);
-      console.log(`  ${icon} ${colors.muted(r.testId.substring(0, 8))} ${changeStr} ${colors.muted(pStr)}`);
+      console.log(
+        `  ${icon} ${colors.muted(r.testId.substring(0, 8))} ${changeStr} ${colors.muted(pStr)}`
+      );
 
       if (r.notificationSent) {
         console.log(`    ${colors.info('\u2190 Notifica inviata')}`);
@@ -384,23 +494,34 @@ export async function runCommand(): Promise<void> {
 
     // Errori
     for (const err of result.errors) {
-      console.log(`  ${chalk.red('\u2717')} ${colors.muted(err.testId.substring(0, 8))} ${colors.error(err.error)}`);
+      console.log(
+        `  ${chalk.red('\u2717')} ${colors.muted(err.testId.substring(0, 8))} ${colors.error(err.error)}`
+      );
     }
 
     // Riepilogo
     console.log('');
     console.log(colors.muted('  ' + '\u2500'.repeat(40)));
-    console.log(`  ${colors.success(`${result.successCount} completati`)} \u00B7 ${result.errorCount > 0 ? colors.error(`${result.errorCount} errori`) : colors.muted('0 errori')}`);
+    console.log(
+      `  ${colors.success(`${result.successCount} completati`)} \u00B7 ${result.errorCount > 0 ? colors.error(`${result.errorCount} errori`) : colors.muted('0 errori')}`
+    );
     console.log('');
   } catch (error) {
-    console.error(colors.error(`  Errore fatale: ${error instanceof Error ? error.message : error}`));
+    console.error(
+      colors.error(
+        `  Errore fatale: ${error instanceof Error ? error.message : error}`
+      )
+    );
   }
 }
 
 /**
  * export <id> — Esporta dati test su file Excel o CSV (con scelta interattiva)
  */
-export async function exportCommand(id: string, options?: { format?: string }): Promise<void> {
+export async function exportCommand(
+  id: string,
+  options?: { format?: string }
+): Promise<void> {
   try {
     const test = findTestById(id);
     if (!test) return;
@@ -414,8 +535,14 @@ export async function exportCommand(id: string, options?: { format?: string }): 
 
     if (testMetrics.length === 0) {
       console.log('');
-      console.log(colors.uncertain('  ⚠ Nessuna metrica disponibile per questo test.'));
-      console.log(colors.muted('  Esegui prima "seo-tool run" per raccogliere dati da GSC.'));
+      console.log(
+        colors.uncertain('  ⚠ Nessuna metrica disponibile per questo test.')
+      );
+      console.log(
+        colors.muted(
+          '  Esegui prima "seo-tool run" per raccogliere dati da GSC.'
+        )
+      );
       console.log('');
       return;
     }
@@ -423,15 +550,23 @@ export async function exportCommand(id: string, options?: { format?: string }): 
     // Scelta formato: flag CLI oppure prompt interattivo
     let format = options?.format;
     if (!format) {
-      const answer = await inquirer.prompt([{
-        type: 'list',
-        name: 'format',
-        message: 'In quale formato vuoi esportare?',
-        choices: [
-          { name: 'Excel (.xlsx) — Report completo con grafici e formattazione', value: 'xlsx' },
-          { name: 'CSV (.csv) — Dati piatti per import in altri tool', value: 'csv' },
-        ],
-      }]);
+      const answer = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'format',
+          message: 'In quale formato vuoi esportare?',
+          choices: [
+            {
+              name: 'Excel (.xlsx) — Report completo con grafici e formattazione',
+              value: 'xlsx',
+            },
+            {
+              name: 'CSV (.csv) — Dati piatti per import in altri tool',
+              value: 'csv',
+            },
+          ],
+        },
+      ]);
       format = answer.format;
     }
 
@@ -460,9 +595,10 @@ export async function exportCommand(id: string, options?: { format?: string }): 
 
     const exportService = new ReportExportService();
 
-    const result = format === 'xlsx'
-      ? await exportService.exportToExcel(exportInput)
-      : await exportService.exportToCSV(exportInput);
+    const result =
+      format === 'xlsx'
+        ? await exportService.exportToExcel(exportInput)
+        : await exportService.exportToCSV(exportInput);
 
     // Scrivi il file nella cartella corrente
     const filePath = path.resolve(result.fileName);
@@ -471,11 +607,17 @@ export async function exportCommand(id: string, options?: { format?: string }): 
     console.log('');
     console.log(colors.success('  Export completato!'));
     console.log(`  ${colors.muted('File:')}     ${filePath}`);
-    console.log(`  ${colors.muted('Formato:')}  ${result.format.toUpperCase()}`);
+    console.log(
+      `  ${colors.muted('Formato:')}  ${result.format.toUpperCase()}`
+    );
     console.log(`  ${colors.muted('Metriche:')} ${result.rowCount} giorni`);
     console.log('');
   } catch (error) {
-    console.error(colors.error(`  Errore: ${error instanceof Error ? error.message : error}`));
+    console.error(
+      colors.error(
+        `  Errore: ${error instanceof Error ? error.message : error}`
+      )
+    );
   }
 }
 
@@ -483,11 +625,14 @@ export async function exportCommand(id: string, options?: { format?: string }): 
  * Aggiorna le righe di un file .env sostituendo le variabili già presenti
  * e aggiungendo in coda quelle mancanti. Le variabili non-Google vengono preservate.
  */
-function updateEnvVars(existingContent: string, vars: Record<string, string>): string {
+function updateEnvVars(
+  existingContent: string,
+  vars: Record<string, string>
+): string {
   const lines = existingContent ? existingContent.split('\n') : [];
   const remaining = { ...vars };
 
-  const updated = lines.map(line => {
+  const updated = lines.map((line) => {
     const match = /^([A-Z_]+)=/.exec(line);
     if (match && match[1] in remaining) {
       const key = match[1];
@@ -519,19 +664,29 @@ export async function setupCommand(): Promise<void> {
 
   if (hasClientId && hasClientSecret) {
     console.log(colors.success('  \u2713 Credenziali già configurate:'));
-    console.log(colors.muted(`    GOOGLE_CLIENT_ID:     ${process.env['GOOGLE_CLIENT_ID']!.substring(0, 8)}...`));
+    console.log(
+      colors.muted(
+        `    GOOGLE_CLIENT_ID:     ${process.env['GOOGLE_CLIENT_ID']!.substring(0, 8)}...`
+      )
+    );
     console.log(colors.muted('    GOOGLE_CLIENT_SECRET: ***'));
     console.log('');
 
-    const { overwrite } = await inquirer.prompt([{
-      type: 'confirm',
-      name: 'overwrite',
-      message: 'Vuoi sovrascriverle con nuove credenziali?',
-      default: false,
-    }]);
+    const { overwrite } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'overwrite',
+        message: 'Vuoi sovrascriverle con nuove credenziali?',
+        default: false,
+      },
+    ]);
 
     if (!overwrite) {
-      console.log(colors.muted('  Operazione annullata. Esegui "seo-tool login" per procedere.'));
+      console.log(
+        colors.muted(
+          '  Operazione annullata. Esegui "seo-tool login" per procedere.'
+        )
+      );
       console.log('');
       return;
     }
@@ -541,8 +696,14 @@ export async function setupCommand(): Promise<void> {
   console.log('');
   console.log(colors.muted('  1. Vai su Google Cloud Console:'));
   console.log('     https://console.cloud.google.com/apis/credentials');
-  console.log(colors.muted('  2. Crea un progetto (o selezionane uno esistente)'));
-  console.log(colors.muted('  3. Crea credenziali \u2192 OAuth 2.0 Client ID \u2192 Applicazione desktop'));
+  console.log(
+    colors.muted('  2. Crea un progetto (o selezionane uno esistente)')
+  );
+  console.log(
+    colors.muted(
+      '  3. Crea credenziali \u2192 OAuth 2.0 Client ID \u2192 Applicazione desktop'
+    )
+  );
   console.log(colors.muted('  4. Copia Client ID e Client Secret'));
   console.log('');
 
@@ -551,13 +712,15 @@ export async function setupCommand(): Promise<void> {
       type: 'input',
       name: 'clientId',
       message: 'GOOGLE_CLIENT_ID:',
-      validate: (input: string) => input.trim().length > 0 || 'Il Client ID è obbligatorio.',
+      validate: (input: string) =>
+        input.trim().length > 0 || 'Il Client ID è obbligatorio.',
     },
     {
       type: 'password',
       name: 'clientSecret',
       message: 'GOOGLE_CLIENT_SECRET:',
-      validate: (input: string) => input.trim().length > 0 || 'Il Client Secret è obbligatorio.',
+      validate: (input: string) =>
+        input.trim().length > 0 || 'Il Client Secret è obbligatorio.',
     },
     {
       type: 'input',
@@ -578,13 +741,16 @@ export async function setupCommand(): Promise<void> {
   const newContent = updateEnvVars(existingContent, {
     GOOGLE_CLIENT_ID: (clientId as string).trim(),
     GOOGLE_CLIENT_SECRET: (clientSecret as string).trim(),
-    GOOGLE_REDIRECT_URI: (redirectUri as string).trim() || 'http://localhost:3000/auth/callback',
+    GOOGLE_REDIRECT_URI:
+      (redirectUri as string).trim() || 'http://localhost:3000/auth/callback',
   });
 
   await writeFile(envPath, newContent, 'utf-8');
 
   console.log('');
-  console.log(colors.success('  \u2713 File .env aggiornato con le credenziali Google.'));
+  console.log(
+    colors.success('  \u2713 File .env aggiornato con le credenziali Google.')
+  );
   console.log('');
   console.log(colors.info('  Prossimo step:'));
   console.log(`  ${colors.muted('$')} seo-tool login`);
@@ -626,10 +792,16 @@ export async function deleteCommand(id: string): Promise<void> {
     console.log('');
 
     const answer = await prompt(
-      chalk.red('Confermi l\'eliminazione? Questa operazione è irreversibile. (s/N):'),
+      chalk.red(
+        "Confermi l'eliminazione? Questa operazione è irreversibile. (s/N):"
+      )
     );
 
-    if (answer.toLowerCase() !== 's' && answer.toLowerCase() !== 'si' && answer.toLowerCase() !== 'sì') {
+    if (
+      answer.toLowerCase() !== 's' &&
+      answer.toLowerCase() !== 'si' &&
+      answer.toLowerCase() !== 'sì'
+    ) {
       console.log(colors.muted('  Operazione annullata.'));
       return;
     }
@@ -638,19 +810,29 @@ export async function deleteCommand(id: string): Promise<void> {
     db.delete(tests).where(eq(tests.id, test.id)).run();
 
     // Registra nell'Audit Log
-    db.insert(auditLogs).values({
-      testId: test.id,
-      action: 'test_deleted',
-      userId: test.userId,
-    }).run();
+    db.insert(auditLogs)
+      .values({
+        testId: test.id,
+        action: 'test_deleted',
+        userId: test.userId,
+      })
+      .run();
 
     console.log('');
-    console.log(colors.success(`  Test "${test.name}" eliminato con successo.`));
+    console.log(
+      colors.success(`  Test "${test.name}" eliminato con successo.`)
+    );
     if (metricsCount > 0) {
-      console.log(colors.muted(`  ${metricsCount} metriche rimosse (cascade).`));
+      console.log(
+        colors.muted(`  ${metricsCount} metriche rimosse (cascade).`)
+      );
     }
     console.log('');
   } catch (error) {
-    console.error(colors.error(`  Errore: ${error instanceof Error ? error.message : error}`));
+    console.error(
+      colors.error(
+        `  Errore: ${error instanceof Error ? error.message : error}`
+      )
+    );
   }
 }

@@ -18,7 +18,9 @@ const SMOKE_TEST_NAME = 'SMOKE_TEST';
 
 async function smokeTest(): Promise<void> {
   console.log('--- Smoke Test DB ---');
-  console.log(`Database: ${process.env['DATABASE_URL'] ?? '(default: ~/.seo-tool/data.db)'}`);
+  console.log(
+    `Database: ${process.env['DATABASE_URL'] ?? '(default: ~/.seo-tool/data.db)'}`
+  );
   console.log('');
 
   try {
@@ -28,7 +30,11 @@ async function smokeTest(): Promise<void> {
 
     // 1. Assicura che esista un utente per il test
     const userId = 'smoke-test-user';
-    const existingUser = db.select().from(users).where(eq(users.id, userId)).get();
+    const existingUser = db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .get();
     if (!existingUser) {
       db.insert(users).values({ id: userId, email: 'smoke@test.local' }).run();
       console.log('[OK] Utente di test creato');
@@ -37,15 +43,19 @@ async function smokeTest(): Promise<void> {
     }
 
     // 2. Crea test di prova
-    const test = db.insert(tests).values({
-      name: SMOKE_TEST_NAME,
-      siteUrl: 'sc-domain:smoke-test.local',
-      urls: JSON.stringify(['https://smoke-test.local/']),
-      startDate: new Date().toISOString(),
-      splitDate: new Date().toISOString(),
-      status: 'running',
-      userId,
-    }).returning().get();
+    const test = db
+      .insert(tests)
+      .values({
+        name: SMOKE_TEST_NAME,
+        siteUrl: 'sc-domain:smoke-test.local',
+        urls: JSON.stringify(['https://smoke-test.local/']),
+        startDate: new Date().toISOString(),
+        splitDate: new Date().toISOString(),
+        status: 'running',
+        userId,
+      })
+      .returning()
+      .get();
     console.log(`[OK] Test creato: ${test.id}`);
 
     // 3. Recupera dal DB

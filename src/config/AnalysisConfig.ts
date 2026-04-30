@@ -16,6 +16,8 @@ export const DEFAULT_ANALYSIS_CONFIG: Readonly<AnalysisConfig> = {
   minimumSampleSize: 7,
 };
 
-export function createAnalysisConfig(overrides?: Partial<AnalysisConfig>): AnalysisConfig {
+export function createAnalysisConfig(
+  overrides?: Partial<AnalysisConfig>
+): AnalysisConfig {
   return { ...DEFAULT_ANALYSIS_CONFIG, ...overrides };
 }

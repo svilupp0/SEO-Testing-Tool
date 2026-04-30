@@ -22,7 +22,10 @@ export class TimeSeriesService {
   /**
    * Test 5.2 - Salva dati serie temporale
    */
-  async saveData(testId: string, timeSeriesData: { date: string; clicks: number; impressions?: number }[]): Promise<void> {
+  async saveData(
+    testId: string,
+    timeSeriesData: { date: string; clicks: number; impressions?: number }[]
+  ): Promise<void> {
     if (timeSeriesData.length === 0) return;
 
     this.db
@@ -33,7 +36,7 @@ export class TimeSeriesService {
           date: new Date(d.date).toISOString(),
           clicks: d.clicks,
           impressions: d.impressions ?? 0,
-        })),
+        }))
       )
       .onConflictDoNothing({ target: [metrics.testId, metrics.date] })
       .run();
@@ -42,7 +45,11 @@ export class TimeSeriesService {
   /**
    * Test 5.2 - Rileva gap nella serie temporale
    */
-  async detectGaps(testId: string, startDate: string, endDate: string): Promise<{ date: string; reason: string }[]> {
+  async detectGaps(
+    testId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<{ date: string; reason: string }[]> {
     const existingMetrics = this.db
       .select({ date: metrics.date })
       .from(metrics)
@@ -50,14 +57,14 @@ export class TimeSeriesService {
         and(
           eq(metrics.testId, testId),
           gte(metrics.date, new Date(startDate).toISOString()),
-          lte(metrics.date, new Date(endDate).toISOString()),
-        ),
+          lte(metrics.date, new Date(endDate).toISOString())
+        )
       )
       .orderBy(metrics.date)
       .all();
 
     const existingDates = new Set(
-      existingMetrics.map((m) => m.date.split('T')[0]),
+      existingMetrics.map((m) => m.date.split('T')[0])
     );
 
     const gaps: { date: string; reason: string }[] = [];
@@ -106,7 +113,7 @@ export class TimeSeriesService {
    */
   async saveGapData(
     testId: string,
-    recoveredData: { date: string; clicks: number; impressions: number },
+    recoveredData: { date: string; clicks: number; impressions: number }
   ) {
     const dateIso = new Date(recoveredData.date).toISOString();
     const now = new Date().toISOString();
@@ -143,8 +150,14 @@ export class TimeSeriesService {
    * Test 5.2 - Verifica se gap è recuperabile (max 30 giorni)
    * Logica pura, non richiede query al database.
    */
-  async shouldRecoverGap(gapDate: string | Date, today: Date): Promise<boolean> {
-    const gapTime = typeof gapDate === 'string' ? new Date(gapDate).getTime() : gapDate.getTime();
+  async shouldRecoverGap(
+    gapDate: string | Date,
+    today: Date
+  ): Promise<boolean> {
+    const gapTime =
+      typeof gapDate === 'string'
+        ? new Date(gapDate).getTime()
+        : gapDate.getTime();
     const todayTime = today.getTime();
     const daysDiff = (todayTime - gapTime) / (1000 * 60 * 60 * 24);
 

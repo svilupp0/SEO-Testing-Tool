@@ -24,16 +24,19 @@ export function getGoogleOAuthConfig(): GoogleOAuthConfig {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost';
-  const authUri = process.env.GOOGLE_AUTH_URI || 'https://accounts.google.com/o/oauth2/auth';
-  const tokenUri = process.env.GOOGLE_TOKEN_URI || 'https://oauth2.googleapis.com/token';
-  const scopesStr = process.env.GOOGLE_SCOPES ||
+  const authUri =
+    process.env.GOOGLE_AUTH_URI || 'https://accounts.google.com/o/oauth2/auth';
+  const tokenUri =
+    process.env.GOOGLE_TOKEN_URI || 'https://oauth2.googleapis.com/token';
+  const scopesStr =
+    process.env.GOOGLE_SCOPES ||
     'https://www.googleapis.com/auth/webmasters.readonly,https://www.googleapis.com/auth/userinfo.email';
 
   if (!clientId || !clientSecret) {
     throw new Error(
       'Google OAuth credentials not configured. ' +
-      'Please create a .env file with GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET. ' +
-      'See .env.example for reference.'
+        'Please create a .env file with GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET. ' +
+        'See .env.example for reference.'
     );
   }
 
@@ -43,7 +46,7 @@ export function getGoogleOAuthConfig(): GoogleOAuthConfig {
     redirectUri,
     authUri,
     tokenUri,
-    scopes: scopesStr.split(',').map(s => s.trim()),
+    scopes: scopesStr.split(',').map((s) => s.trim()),
   };
 }
 
@@ -86,12 +89,16 @@ export function getTestCredentials(): GoogleOAuthConfig {
   } catch {
     // Fallback: prova a caricare dal file client_secret
     const files = readdirSync(process.cwd());
-    const secretFile = files.find((f: string) => f.startsWith('client_secret_') && f.endsWith('.json'));
+    const secretFile = files.find(
+      (f: string) => f.startsWith('client_secret_') && f.endsWith('.json')
+    );
 
     if (secretFile) {
       return loadCredentialsFromFile(path.join(process.cwd(), secretFile));
     }
 
-    throw new Error('No credentials found. Configure .env or add client_secret file.');
+    throw new Error(
+      'No credentials found. Configure .env or add client_secret file.'
+    );
   }
 }

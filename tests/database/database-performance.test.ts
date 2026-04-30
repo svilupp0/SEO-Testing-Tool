@@ -9,7 +9,13 @@
 
 import { DatabaseService } from '../../src/database/DatabaseService';
 import { TimeSeriesService } from '../../src/database/TimeSeriesService';
-import { createTestDb, seedUser, seedTest, seedMetrics, type TestDB } from '../helpers/test-db';
+import {
+  createTestDb,
+  seedUser,
+  seedTest,
+  seedMetrics,
+  type TestDB,
+} from '../helpers/test-db';
 import { metrics } from '../../src/database/schema';
 
 describe('Test 5.1 - Concorrenza', () => {
@@ -34,7 +40,7 @@ describe('Test 5.1 - Concorrenza', () => {
 
     // Assert: Tutte le 100 richieste devono completare con successo
     expect(results).toHaveLength(numberOfUsers);
-    expect(results.every(r => r !== null)).toBe(true);
+    expect(results.every((r) => r !== null)).toBe(true);
   });
 
   it('dovrebbe prevenire race condition quando più utenti modificano lo stesso test', async () => {
@@ -46,8 +52,16 @@ describe('Test 5.1 - Concorrenza', () => {
 
     // Act: Modifiche simultanee (solo user-1 è proprietario)
     const [result1, result2] = await Promise.all([
-      dbService.updateTest('test-race', { name: 'Updated by user 1' }, 'user-1'),
-      dbService.updateTest('test-race', { name: 'Updated by user 2' }, 'user-2'),
+      dbService.updateTest(
+        'test-race',
+        { name: 'Updated by user 1' },
+        'user-1'
+      ),
+      dbService.updateTest(
+        'test-race',
+        { name: 'Updated by user 2' },
+        'user-2'
+      ),
     ]);
 
     // Assert: Solo l'update di user-1 (proprietario) ha effetto
@@ -70,7 +84,11 @@ describe('Test 5.1 - Concorrenza', () => {
     const dbService = new DatabaseService(db as any);
 
     // Act
-    const result = await dbService.createTestWithMetrics(testData, metrics, 'user-1');
+    const result = await dbService.createTestWithMetrics(
+      testData,
+      metrics,
+      'user-1'
+    );
 
     // Assert
     expect(result.testId).toBeDefined();
@@ -100,7 +118,11 @@ describe('Test 5.2 - Integrità Serie Temporale', () => {
     ]);
 
     // Act: Verifichiamo gap
-    const gaps = await tsService.detectGaps('test-123', '2024-01-01', '2024-01-05');
+    const gaps = await tsService.detectGaps(
+      'test-123',
+      '2024-01-01',
+      '2024-01-05'
+    );
 
     // Assert: Il gap del 03/01 deve essere rilevato
     expect(gaps).toHaveLength(1);
@@ -188,7 +210,11 @@ describe('Test 5.3 - Storage e Performance', () => {
     const dbService = new DatabaseService(db as any);
 
     const startTime = Date.now();
-    const result = await dbService.queryTimeRange('test-123', '2024-01-01', '2024-12-31');
+    const result = await dbService.queryTimeRange(
+      'test-123',
+      '2024-01-01',
+      '2024-12-31'
+    );
     const elapsedTime = Date.now() - startTime;
 
     expect(result.useIndex).toBe(true);
@@ -238,9 +264,17 @@ describe('Test 5.3 - Storage e Performance', () => {
     const oldDate = new Date();
     oldDate.setFullYear(oldDate.getFullYear() - 6);
 
-    db.insert(metrics).values([
-      { testId: 'test-123', date: oldDate.toISOString(), clicks: 50, impressions: 500, createdAt: oldDate.toISOString() },
-    ]).run();
+    db.insert(metrics)
+      .values([
+        {
+          testId: 'test-123',
+          date: oldDate.toISOString(),
+          clicks: 50,
+          impressions: 500,
+          createdAt: oldDate.toISOString(),
+        },
+      ])
+      .run();
 
     // Inserisci anche metriche recenti
     seedMetrics(db, 'test-123', '2024-01-01', 10, 100);

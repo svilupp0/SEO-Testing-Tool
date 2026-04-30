@@ -21,6 +21,7 @@ npm test -- full-oauth-flow --run
 ```
 
 **Output:**
+
 ```
 https://accounts.google.com/o/oauth2/v2/auth?client_id=548098099543-1et8nm1hm466tf7hcmqntjd07mk81olq.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fwebmasters.readonly+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&access_type=offline&state=789dr38q2tamlf2r0gt
 ```
@@ -58,6 +59,7 @@ https://accounts.google.com/o/oauth2/v2/auth?client_id=548098099543-1et8nm1hm466
 2. **Trova STEP 2** (linea ~58)
 
 3. **Rimuovi `.skip` dalla linea 58:**
+
    ```typescript
    // PRIMA
    it.skip('STEP 2: Dovrebbe scambiare CODE con TOKEN...', async () => {
@@ -67,6 +69,7 @@ https://accounts.google.com/o/oauth2/v2/auth?client_id=548098099543-1et8nm1hm466
    ```
 
 4. **Incolla il CODE** ottenuto da STEP 2 (linea ~78):
+
    ```typescript
    // PRIMA
    const authorizationCode = 'PASTE_YOUR_AUTHORIZATION_CODE_HERE';
@@ -76,6 +79,7 @@ https://accounts.google.com/o/oauth2/v2/auth?client_id=548098099543-1et8nm1hm466
    ```
 
 5. **Esegui il test:**
+
    ```bash
    npm test -- full-oauth-flow --run
    ```
@@ -93,11 +97,13 @@ https://accounts.google.com/o/oauth2/v2/auth?client_id=548098099543-1et8nm1hm466
 1. **Rimuovi `.skip` da STEP 3** (linea ~99)
 
 2. **Incolla l'ACCESS TOKEN** da STEP 3 (linea ~120):
+
    ```typescript
    const accessToken = 'ya29.a0AfH6SMBx...'; // il tuo token reale
    ```
 
 3. **Esegui il test:**
+
    ```bash
    npm test -- full-oauth-flow --run
    ```
@@ -118,11 +124,13 @@ https://accounts.google.com/o/oauth2/v2/auth?client_id=548098099543-1et8nm1hm466
 1. **Rimuovi `.skip` da STEP 4** (linea ~150)
 
 2. **Incolla il REFRESH TOKEN** da STEP 3 (linea ~170):
+
    ```typescript
    const refreshToken = '1//0gHcKp...'; // il tuo refresh token reale
    ```
 
 3. **Esegui il test:**
+
    ```bash
    npm test -- full-oauth-flow --run
    ```
@@ -144,11 +152,13 @@ https://accounts.google.com/o/oauth2/v2/auth?client_id=548098099543-1et8nm1hm466
 1. **Rimuovi `.skip` da STEP 5** (linea ~195)
 
 2. **Incolla un ACCESS TOKEN valido** (da STEP 3 o STEP 5):
+
    ```typescript
    const accessToken = 'ya29.a0AfH6SMBx...';
    ```
 
 3. **Inserisci l'URL della tua proprietà GSC:**
+
    ```typescript
    // Per un sito web
    const propertyUrl = 'https://www.tuosito.com/';
@@ -168,13 +178,13 @@ https://accounts.google.com/o/oauth2/v2/auth?client_id=548098099543-1et8nm1hm466
 
 ## 📊 Riepilogo Test Eseguibili
 
-| Test | Sezione | Richiede | Chiamate API Reali |
-|------|---------|----------|-------------------|
-| **STEP 1** | Setup | Niente | ❌ No (solo genera URL) |
-| **STEP 2** | Setup | Authorization Code | ✅ POST /token |
-| **STEP 3** | 1.1 Login | Access Token | ✅ GET /userinfo |
-| **STEP 4** | 1.2 Token Refresh | Refresh Token | ✅ POST /token |
-| **STEP 5** | 2.x Ingestione | Access Token + GSC Property | ✅ POST /searchanalytics/query |
+| Test       | Sezione           | Richiede                    | Chiamate API Reali             |
+| ---------- | ----------------- | --------------------------- | ------------------------------ |
+| **STEP 1** | Setup             | Niente                      | ❌ No (solo genera URL)        |
+| **STEP 2** | Setup             | Authorization Code          | ✅ POST /token                 |
+| **STEP 3** | 1.1 Login         | Access Token                | ✅ GET /userinfo               |
+| **STEP 4** | 1.2 Token Refresh | Refresh Token               | ✅ POST /token                 |
+| **STEP 5** | 2.x Ingestione    | Access Token + GSC Property | ✅ POST /searchanalytics/query |
 
 ---
 
@@ -185,6 +195,7 @@ https://accounts.google.com/o/oauth2/v2/auth?client_id=548098099543-1et8nm1hm466
 **Causa:** Il code è scaduto (max 10 minuti) o già usato
 
 **Soluzione:**
+
 1. Ripeti STEP 1 per generare un nuovo URL
 2. Ripeti STEP 2 per ottenere un nuovo code
 3. Procedi velocemente a STEP 3 (entro 10 minuti)
@@ -196,6 +207,7 @@ https://accounts.google.com/o/oauth2/v2/auth?client_id=548098099543-1et8nm1hm466
 **Causa:** L'access token è scaduto (validità 1 ora)
 
 **Soluzione:**
+
 1. Usa STEP 5 (refresh token) per ottenere un nuovo access token
 2. Oppure ripeti da STEP 1
 
@@ -206,6 +218,7 @@ https://accounts.google.com/o/oauth2/v2/auth?client_id=548098099543-1et8nm1hm466
 **Causa:** Il redirect_uri nel codice non corrisponde a quello in Google Cloud Console
 
 **Soluzione:**
+
 1. Vai su Google Cloud Console
 2. APIs & Services → Credentials
 3. Modifica il tuo OAuth 2.0 Client
@@ -218,6 +231,7 @@ https://accounts.google.com/o/oauth2/v2/auth?client_id=548098099543-1et8nm1hm466
 **Causa:** L'app è in modalità testing e il tuo account non è nella lista degli utenti di test
 
 **Soluzione:**
+
 1. Vai su Google Cloud Console
 2. APIs & Services → OAuth consent screen
 3. Aggiungi il tuo account Google nella sezione "Test users"
@@ -229,6 +243,7 @@ https://accounts.google.com/o/oauth2/v2/auth?client_id=548098099543-1et8nm1hm466
 Eseguendo tutti gli step, verrai a testare:
 
 ### ✅ Sezione 1: Autenticazione e Accesso
+
 - [x] 1.1 Login Google OAuth2 (STEP 3)
 - [x] 1.2 Scadenza Token (STEP 4)
 - [ ] 1.3 Revoca Accesso (manuale - revoca da Google Account)
@@ -236,6 +251,7 @@ Eseguendo tutti gli step, verrai a testare:
 - [ ] 1.5 Permessi GSC (testato in STEP 5)
 
 ### ✅ Sezione 2: Ingestione Dati
+
 - [ ] 2.1 Rate Limit (STEP 5 - se fai molte richieste)
 - [ ] 2.2 Dati Mancanti (STEP 5 - verifica gap temporali)
 - [ ] 2.3 Fuso Orario (STEP 5 - verifica allineamento date)

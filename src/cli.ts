@@ -49,15 +49,9 @@ program
   .description('Collega il tuo account Google per accedere a Search Console')
   .action(loginCommand);
 
-program
-  .command('add')
-  .description('Crea un nuovo test SEO')
-  .action(addCommand);
+program.command('add').description('Crea un nuovo test SEO').action(addCommand);
 
-program
-  .command('list')
-  .description('Mostra tutti i test')
-  .action(listCommand);
+program.command('list').description('Mostra tutti i test').action(listCommand);
 
 program
   .command('status')
@@ -73,7 +67,10 @@ program
 program
   .command('export')
   .argument('<id>', 'ID del test (anche parziale)')
-  .option('--format <fmt>', 'Formato export: xlsx o csv (interattivo se omesso)')
+  .option(
+    '--format <fmt>',
+    'Formato export: xlsx o csv (interattivo se omesso)'
+  )
   .description('Esporta dati test su file Excel o CSV')
   .action(exportCommand);
 
@@ -85,7 +82,9 @@ program
 
 program
   .command('demo')
-  .description('Popola il database con 2 esperimenti di esempio (70 giorni, senza account Google)')
+  .description(
+    'Popola il database con 2 esperimenti di esempio (70 giorni, senza account Google)'
+  )
   .action(demoCommand);
 
 program

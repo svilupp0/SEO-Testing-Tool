@@ -79,19 +79,19 @@ export class TokenManager {
     // Se Ã¨ un userId, recupera il token
     let refreshToken: string;
     let userId: string | null = null;
-    
+
     if (this.tokens.has(userIdOrToken)) {
       userId = userIdOrToken;
       const storedToken = this.tokens.get(userIdOrToken);
       if (!storedToken) {
         throw new Error('No token found');
       }
-      
+
       // Controlla se Ã¨ giÃ  revocato
       if (this.revokedTokens.has(userId)) {
         throw new Error('Accesso revocato. Riconnetti il tuo account Google.');
       }
-      
+
       refreshToken = storedToken.refresh_token;
     } else {
       refreshToken = userIdOrToken;
@@ -116,23 +116,25 @@ export class TokenManager {
         if (response.status === 500) {
           throw new Error('Errore del server Google');
         }
-        
+
         // Prova a parsare il JSON solo se non Ã¨ un errore 500
         let data: { error?: string } = {};
         try {
-          data = await response.json() as { error?: string };
+          data = (await response.json()) as { error?: string };
         } catch {
           // Se non Ã¨ JSON valido, continua con i controlli di status
         }
-        
+
         // Controlla se Ã¨ un errore di revoca
         if (data.error === 'invalid_grant') {
           if (userId) {
             this.revokedTokens.set(userId, new Date());
           }
-          throw new Error('Accesso revocato. Riconnetti il tuo account Google.');
+          throw new Error(
+            'Accesso revocato. Riconnetti il tuo account Google.'
+          );
         }
-        
+
         const isRevoked = response.status === 400 || response.status === 401;
         if (isRevoked) {
           throw new Error('Sessione scaduta. Effettua nuovamente il login.');
@@ -140,7 +142,7 @@ export class TokenManager {
         throw new Error('Token refresh failed');
       }
 
-      const data = await response.json() as TokenResponse;
+      const data = (await response.json()) as TokenResponse;
       return data;
     } catch (error) {
       if (error instanceof Error) {
@@ -161,13 +163,16 @@ export class TokenManager {
     }
   }
 
-  async saveTokens(userIdOrToken: string | StoredToken, tokens?: TokenResponse): Promise<void> {
+  async saveTokens(
+    userIdOrToken: string | StoredToken,
+    tokens?: TokenResponse
+  ): Promise<void> {
     if (typeof userIdOrToken === 'string' && tokens) {
       // Nuovo formato: saveTokens(userId, tokens)
       const userId = userIdOrToken;
       const storedToken = this.processToken(tokens);
       this.tokens.set(userId, storedToken);
-      
+
       // Se salviamo nuovi token, rimuoviamo lo stato di revoca
       if (this.revokedTokens.has(userId)) {
         this.revokedTokens.delete(userId);
@@ -180,7 +185,9 @@ export class TokenManager {
 
   async getValidAccessToken(): Promise<string>;
   async getValidAccessToken(userId: string): Promise<ValidTokenResult>;
-  async getValidAccessToken(userId?: string): Promise<string | ValidTokenResult> {
+  async getValidAccessToken(
+    userId?: string
+  ): Promise<string | ValidTokenResult> {
     if (userId) {
       // Controlla se Ã¨ revocato
       if (this.revokedTokens.has(userId)) {
@@ -190,7 +197,7 @@ export class TokenManager {
           token: null,
         };
       }
-      
+
       const token = this.tokens.get(userId);
       if (!token) {
         return {
@@ -199,28 +206,33 @@ export class TokenManager {
           token: null,
         };
       }
-      
+
       return {
         success: true,
         error: null,
         token: token.access_token,
       };
     }
-    
+
     // Vecchio comportamento
     if (!this.currentToken) {
       throw new Error('No token available');
     }
 
-    if (this.isTokenExpired(this.currentToken) || this.needsRefresh(this.currentToken)) {
-      const newTokens = await this.refreshAccessToken(this.currentToken.refresh_token);
+    if (
+      this.isTokenExpired(this.currentToken) ||
+      this.needsRefresh(this.currentToken)
+    ) {
+      const newTokens = await this.refreshAccessToken(
+        this.currentToken.refresh_token
+      );
       const processedToken = this.processToken(newTokens);
-      
+
       // Mantieni il refresh token originale se Google non ne invia uno nuovo
       if (!newTokens.refresh_token) {
         processedToken.refresh_token = this.currentToken.refresh_token;
       }
-      
+
       this.currentToken = processedToken;
     }
 

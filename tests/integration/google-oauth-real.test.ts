@@ -37,14 +37,16 @@ describe('Google OAuth - Test Integrazione Reale', () => {
     expect(authUrl).toContain('webmasters.readonly');
     expect(authUrl).toContain('userinfo.email');
     expect(authUrl).toContain('response_type=code');
-    expect(authUrl).toContain(`redirect_uri=${encodeURIComponent(config.redirectUri)}`);
+    expect(authUrl).toContain(
+      `redirect_uri=${encodeURIComponent(config.redirectUri)}`
+    );
     expect(authUrl).toContain('access_type=offline'); // Per ottenere refresh_token
 
     console.log('\n✅ URL di autenticazione generato:');
     console.log(authUrl);
     console.log('\n📋 Per testare OAuth flow completo:');
     console.log('1. Visita questo URL nel browser');
-    console.log('2. Autorizza l\'applicazione');
+    console.log("2. Autorizza l'applicazione");
     console.log('3. Copia il "code" dal redirect URL');
     console.log('4. Usa il code nel test successivo (attualmente skipped)\n');
   });
@@ -75,8 +77,14 @@ describe('Google OAuth - Test Integrazione Reale', () => {
       expect(tokens.expires_in).toBeGreaterThan(0);
 
       console.log('\n✅ Token ottenuti con successo!');
-      console.log('Access Token:', tokens.access_token.substring(0, 20) + '...');
-      console.log('Refresh Token:', tokens.refresh_token ? 'Present' : 'Missing');
+      console.log(
+        'Access Token:',
+        tokens.access_token.substring(0, 20) + '...'
+      );
+      console.log(
+        'Refresh Token:',
+        tokens.refresh_token ? 'Present' : 'Missing'
+      );
       console.log('Expires In:', tokens.expires_in, 'secondi\n');
     } catch (error) {
       console.error('\n❌ Errore durante lo scambio del code:');
@@ -109,7 +117,9 @@ describe('Google OAuth - Test Integrazione Reale', () => {
       console.log('Picture:', userInfo.picture ? 'Present' : 'N/A');
       console.log();
     } catch (error) {
-      console.error('\n❌ Errore durante il recupero delle informazioni utente:');
+      console.error(
+        '\n❌ Errore durante il recupero delle informazioni utente:'
+      );
       console.error(error);
       throw error;
     }
@@ -121,7 +131,9 @@ describe('Google OAuth - Verifica Configurazione', () => {
     const config = getTestCredentials();
 
     // Verifica formato client_id
-    expect(config.clientId).toMatch(/^\d+-[\w]+\.apps\.googleusercontent\.com$/);
+    expect(config.clientId).toMatch(
+      /^\d+-[\w]+\.apps\.googleusercontent\.com$/
+    );
 
     // Verifica formato client_secret
     expect(config.clientSecret).toMatch(/^GOCSPX-[\w-]+$/);
@@ -134,8 +146,12 @@ describe('Google OAuth - Verifica Configurazione', () => {
     expect(config.tokenUri).toBe('https://oauth2.googleapis.com/token');
 
     // Verifica scopes
-    expect(config.scopes).toContain('https://www.googleapis.com/auth/webmasters.readonly');
-    expect(config.scopes).toContain('https://www.googleapis.com/auth/userinfo.email');
+    expect(config.scopes).toContain(
+      'https://www.googleapis.com/auth/webmasters.readonly'
+    );
+    expect(config.scopes).toContain(
+      'https://www.googleapis.com/auth/userinfo.email'
+    );
   });
 
   it('dovrebbe usare il project_id corretto', () => {

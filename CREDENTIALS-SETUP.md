@@ -29,11 +29,13 @@ seo-testing-tool/
 ## 🔒 Sicurezza
 
 ### ⚠️ File da NON committare MAI:
+
 - ❌ `client_secret_*.json` - Contiene client_secret
 - ❌ `.env` - Contiene credenziali reali
 - ❌ `token.json` - Contiene token di accesso
 
 ### ✅ File da committare:
+
 - ✅ `.env.example` - Template senza credenziali reali
 - ✅ `.gitignore` - Protegge i file sensibili
 - ✅ `src/config/env.ts` - Codice per caricare credenziali
@@ -53,6 +55,7 @@ GOOGLE_REDIRECT_URI=http://localhost
 ```
 
 **Nei test:**
+
 ```typescript
 import { getGoogleOAuthConfig } from '../src/config/env';
 
@@ -137,17 +140,21 @@ describe('Google OAuth - Test Integrazione Reale', () => {
 ## 🔄 Workflow Test
 
 ### Test Unit (con Mock) - Default
+
 ```bash
 npm test
 ```
+
 - Usa mock delle API Google
 - Veloce, offline, deterministico
 - Per sviluppo TDD quotidiano
 
 ### Test Integrazione (con credenziali reali) - Manuale
+
 ```bash
 npm test -- integration
 ```
+
 - Usa credenziali reali da `.env`
 - Richiede connessione internet
 - Per verificare integrazione con Google

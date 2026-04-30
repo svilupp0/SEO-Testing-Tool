@@ -5,7 +5,12 @@ import { StatisticalEngine } from '../../src/stats/StatisticalEngine';
  * Usa un LCG (Linear Congruential Generator) + Box-Muller per distribuzione normale.
  * Il seed garantisce riproducibilità tra esecuzioni.
  */
-function generateNoisyData(mean: number, stdDev: number, n: number, seed: number = 42): number[] {
+function generateNoisyData(
+  mean: number,
+  stdDev: number,
+  n: number,
+  seed: number = 42
+): number[] {
   const data: number[] = [];
   let state = seed;
   const nextRand = () => {
@@ -23,7 +28,7 @@ function generateNoisyData(mean: number, stdDev: number, n: number, seed: number
 }
 
 describe('Statistical Engine - Test 3.1: Test Ipotesi Nulla', () => {
-  test('dovrebbe riconoscere quando non c\'è stato alcun cambiamento significativo', () => {
+  test("dovrebbe riconoscere quando non c'è stato alcun cambiamento significativo", () => {
     // ARRANGE: Dati con stessa media (~100) e rumore naturale
     const periodoBefore = generateNoisyData(100, 10, 30, 1);
     const periodoAfter = generateNoisyData(100, 10, 30, 2);
@@ -44,7 +49,9 @@ describe('Statistical Engine - Test 3.1: Test Ipotesi Nulla', () => {
     expect(risultato.isSignificant).toBe(false);
 
     // 3. Il messaggio deve indicare chiaramente che non c'è cambiamento
-    expect(risultato.message).toBe('Nessun cambiamento significativo rilevato.');
+    expect(risultato.message).toBe(
+      'Nessun cambiamento significativo rilevato.'
+    );
 
     // 4. La variazione percentuale dovrebbe essere piccola
     expect(Math.abs(risultato.percentageChange)).toBeLessThan(10);
@@ -64,7 +71,9 @@ describe('Statistical Engine - Test 3.1: Test Ipotesi Nulla', () => {
 
     expect(risultato.pValue).toBeGreaterThan(0.05);
     expect(risultato.isSignificant).toBe(false);
-    expect(risultato.message).toBe('Nessun cambiamento significativo rilevato.');
+    expect(risultato.message).toBe(
+      'Nessun cambiamento significativo rilevato.'
+    );
   });
 
   test('dovrebbe riconoscere variazioni minime come non significative', () => {
@@ -101,7 +110,9 @@ describe('Statistical Engine - Test 3.2: Test Significatività', () => {
 
     // ASSERT: Verificare che il sistema riconosca dati insufficienti
     expect(risultato.isSignificant).toBe(false);
-    expect(risultato.message).toBe('Dati insufficienti per determinare significatività statistica. Continua il test.');
+    expect(risultato.message).toBe(
+      'Dati insufficienti per determinare significatività statistica. Continua il test.'
+    );
     expect(risultato.hasInsufficientData).toBe(true);
   });
 
@@ -120,7 +131,9 @@ describe('Statistical Engine - Test 3.2: Test Significatività', () => {
     // Anche con +20%, i numeri sono troppo bassi per essere affidabili
     expect(risultato.isSignificant).toBe(false);
     expect(risultato.hasInsufficientData).toBe(true);
-    expect(risultato.message).toBe('Dati insufficienti per determinare significatività statistica. Continua il test.');
+    expect(risultato.message).toBe(
+      'Dati insufficienti per determinare significatività statistica. Continua il test.'
+    );
   });
 
   test('dovrebbe riconoscere quando i dati sono sufficienti', () => {
@@ -139,7 +152,9 @@ describe('Statistical Engine - Test 3.2: Test Significatività', () => {
     expect(risultato.hasInsufficientData).toBe(false);
     expect(risultato.isSignificant).toBe(true);
     expect(risultato.pValue).toBeLessThan(0.05);
-    expect(risultato.message).not.toBe('Dati insufficienti per determinare significatività statistica. Continua il test.');
+    expect(risultato.message).not.toBe(
+      'Dati insufficienti per determinare significatività statistica. Continua il test.'
+    );
   });
 });
 
@@ -238,17 +253,13 @@ describe('Statistical Engine - Test 3.4: Test Stagionalità', () => {
   test('dovrebbe confrontare lo stesso giorno della settimana per evitare falsi allarmi da stagionalità', () => {
     // ARRANGE: Pattern stagionale settimanale identico
     const periodoBefore = [
-      100, 100, 100, 100, 100, 70, 70,
-      100, 100, 100, 100, 100, 70, 70,
-      100, 100, 100, 100, 100, 70, 70,
-      100, 100, 100, 100, 100, 70, 70,
+      100, 100, 100, 100, 100, 70, 70, 100, 100, 100, 100, 100, 70, 70, 100,
+      100, 100, 100, 100, 70, 70, 100, 100, 100, 100, 100, 70, 70,
     ];
 
     const periodoAfter = [
-      100, 100, 100, 100, 100, 70, 70,
-      100, 100, 100, 100, 100, 70, 70,
-      100, 100, 100, 100, 100, 70, 70,
-      100, 100, 100, 100, 100, 70, 70,
+      100, 100, 100, 100, 100, 70, 70, 100, 100, 100, 100, 100, 70, 70, 100,
+      100, 100, 100, 100, 70, 70, 100, 100, 100, 100, 100, 70, 70,
     ];
 
     const statisticalEngine = new StatisticalEngine();
@@ -263,15 +274,15 @@ describe('Statistical Engine - Test 3.4: Test Stagionalità', () => {
     // ASSERT: Il sistema non deve confondere stagionalità con cambiamento
     expect(risultato.isSignificant).toBe(false);
     expect(Math.abs(risultato.percentageChange)).toBeLessThan(1);
-    expect(risultato.message).toBe('Nessun cambiamento significativo rilevato.');
+    expect(risultato.message).toBe(
+      'Nessun cambiamento significativo rilevato.'
+    );
   });
 
   test('dovrebbe rilevare pattern stagionale nei dati', () => {
     const periodoBefore = [
-      100, 100, 100, 100, 100, 70, 70,
-      100, 100, 100, 100, 100, 70, 70,
-      100, 100, 100, 100, 100, 70, 70,
-      100, 100, 100, 100, 100, 70, 70,
+      100, 100, 100, 100, 100, 70, 70, 100, 100, 100, 100, 100, 70, 70, 100,
+      100, 100, 100, 100, 70, 70, 100, 100, 100, 100, 100, 70, 70,
     ];
 
     const statisticalEngine = new StatisticalEngine();
@@ -289,18 +300,14 @@ describe('Statistical Engine - Test 3.4: Test Stagionalità', () => {
 
   test('dovrebbe rilevare cambiamenti REALI anche con stagionalità presente', () => {
     const periodoBefore = [
-      100, 100, 100, 100, 100, 70, 70,
-      100, 100, 100, 100, 100, 70, 70,
-      100, 100, 100, 100, 100, 70, 70,
-      100, 100, 100, 100, 100, 70, 70,
+      100, 100, 100, 100, 100, 70, 70, 100, 100, 100, 100, 100, 70, 70, 100,
+      100, 100, 100, 100, 70, 70, 100, 100, 100, 100, 100, 70, 70,
     ];
 
     // Dopo: stesso pattern ma +20% su tutto (miglioramento reale)
     const periodoAfter = [
-      120, 120, 120, 120, 120, 84, 84,
-      120, 120, 120, 120, 120, 84, 84,
-      120, 120, 120, 120, 120, 84, 84,
-      120, 120, 120, 120, 120, 84, 84,
+      120, 120, 120, 120, 120, 84, 84, 120, 120, 120, 120, 120, 84, 84, 120,
+      120, 120, 120, 120, 84, 84, 120, 120, 120, 120, 120, 84, 84,
     ];
 
     const statisticalEngine = new StatisticalEngine();
@@ -318,10 +325,8 @@ describe('Statistical Engine - Test 3.4: Test Stagionalità', () => {
 
   test('dovrebbe gestire confronto senza consapevolezza stagionale (comportamento classico)', () => {
     const periodoBefore = [
-      100, 100, 100, 100, 100, 70, 70,
-      100, 100, 100, 100, 100, 70, 70,
-      100, 100, 100, 100, 100, 70, 70,
-      100, 100, 100, 100, 100, 70, 70,
+      100, 100, 100, 100, 100, 70, 70, 100, 100, 100, 100, 100, 70, 70, 100,
+      100, 100, 100, 100, 70, 70, 100, 100, 100, 100, 100, 70, 70,
     ];
 
     const periodoAfter = [...periodoBefore];
@@ -397,7 +402,7 @@ describe('Statistical Engine - Test 3.5: Test Gruppo di Controllo', () => {
     expect(risultato.relativePerformance!).toBeCloseTo(-20, -1);
   });
 
-  test('dovrebbe calcolare performance assoluta quando NON c\'è gruppo di controllo', () => {
+  test("dovrebbe calcolare performance assoluta quando NON c'è gruppo di controllo", () => {
     // Senza gruppo di controllo, deve usare la performance assoluta
     const testPagesBefore = generateNoisyData(100, 8, 30, 38);
     const testPagesAfter = generateNoisyData(95, 8, 30, 39);
@@ -467,7 +472,10 @@ describe('Statistical Engine - Test 3.6: Welch t-Test Correttezza Matematica', (
   test('dovrebbe calcolare p-value corretto per campioni con risultato noto', () => {
     // Verificato con R: t.test(c(10,12,14,16,18), c(20,22,24,26,28))
     // t = -5.0, df = 8, p-value = 0.001053
-    const engine = new StatisticalEngine({ minimumDataThreshold: 0, minimumSampleSize: 2 });
+    const engine = new StatisticalEngine({
+      minimumDataThreshold: 0,
+      minimumSampleSize: 2,
+    });
     const result = engine.analyze({
       before: [10, 12, 14, 16, 18],
       after: [20, 22, 24, 26, 28],

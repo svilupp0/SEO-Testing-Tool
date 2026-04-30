@@ -23,6 +23,7 @@
 ```
 
 **Verifiche completate:**
+
 - ✅ Generazione URL OAuth2 corretto
 - ✅ Autorizzazione Google riuscita (dopo aggiunta test user)
 - ✅ Exchange authorization code → access/refresh token
@@ -30,6 +31,7 @@
 - ✅ Email verificata da Google
 
 **Token ottenuti:**
+
 - Access Token: `ya29.a0AUMWg_LYlkDUtaMWjlvxw_uO3NWM0ibe9jq...`
 - Refresh Token: `1//03GJv1csMUPliCgYIARAAGAMSNwF-L9Irk119ku...`
 - Scadenza: 3599 secondi (60 minuti)
@@ -51,6 +53,7 @@
 ```
 
 **Verifiche completate:**
+
 - ✅ Refresh token funziona correttamente
 - ✅ Nuovo access token generato con successo
 - ✅ Refresh token riutilizzabile (mantenuto precedente)
@@ -58,6 +61,7 @@
 - ✅ Nessuna interruzione servizio per l'utente
 
 **Comportamento Google:**
+
 - Google NON invia sempre un nuovo refresh_token
 - Il sistema mantiene correttamente il refresh_token precedente
 - Il nuovo access_token ha validità di 60 minuti
@@ -66,15 +70,15 @@
 
 ## 📊 Confronto Mock vs API Reali
 
-| Aspetto | Test con Mock | Test con API Reali |
-|---------|---------------|-------------------|
-| **Velocità** | ⚡ Istantaneo (ms) | 🐌 Rete-dipendente (500-1000ms) |
-| **Affidabilità** | ✅ Sempre pass | ✅ Pass (richiede setup) |
-| **Offline** | ✅ Funziona | ❌ Richiede internet |
-| **Credenziali** | ❌ Fake | ✅ Reali |
-| **User Info** | ❌ Mock data | ✅ Dati reali Google |
-| **Copertura** | ✅ 17 test OAuth | ✅ 2 test integrazione |
-| **CI/CD** | ✅ Perfetto | ⚠️ Richiede secrets |
+| Aspetto          | Test con Mock      | Test con API Reali              |
+| ---------------- | ------------------ | ------------------------------- |
+| **Velocità**     | ⚡ Istantaneo (ms) | 🐌 Rete-dipendente (500-1000ms) |
+| **Affidabilità** | ✅ Sempre pass     | ✅ Pass (richiede setup)        |
+| **Offline**      | ✅ Funziona        | ❌ Richiede internet            |
+| **Credenziali**  | ❌ Fake            | ✅ Reali                        |
+| **User Info**    | ❌ Mock data       | ✅ Dati reali Google            |
+| **Copertura**    | ✅ 17 test OAuth   | ✅ 2 test integrazione          |
+| **CI/CD**        | ✅ Perfetto        | ⚠️ Richiede secrets             |
 
 ---
 
@@ -82,13 +86,13 @@
 
 ### ✅ Sezione 1: Autenticazione e Accesso
 
-| Test | Priorità | Mock | API Reale | Note |
-|------|----------|------|-----------|------|
-| 1.1 Login OAuth2 | CRITICA | ✅ 7/7 | ✅ PASS | Email verificata |
-| 1.2 Scadenza Token | CRITICA | ✅ 10/10 | ✅ PASS | Refresh funziona |
-| 1.3 Revoca Accesso | ALTA | ✅ 8/8 | ⏭️ Manual | Richiede revoca manuale |
-| 1.4 Multi-tenancy | CRITICA | ✅ 9/10 | ⏭️ Manual | Richiede multi-utente |
-| 1.5 Permessi GSC | ALTA | ⚠️ 9/12 | ⏭️ TODO | makeRequest da implementare |
+| Test               | Priorità | Mock     | API Reale | Note                        |
+| ------------------ | -------- | -------- | --------- | --------------------------- |
+| 1.1 Login OAuth2   | CRITICA  | ✅ 7/7   | ✅ PASS   | Email verificata            |
+| 1.2 Scadenza Token | CRITICA  | ✅ 10/10 | ✅ PASS   | Refresh funziona            |
+| 1.3 Revoca Accesso | ALTA     | ✅ 8/8   | ⏭️ Manual | Richiede revoca manuale     |
+| 1.4 Multi-tenancy  | CRITICA  | ✅ 9/10  | ⏭️ Manual | Richiede multi-utente       |
+| 1.5 Permessi GSC   | ALTA     | ⚠️ 9/12  | ⏭️ TODO   | makeRequest da implementare |
 
 **Completamento Autenticazione:** 2/5 test con API reali (100% di quelli eseguibili automaticamente)
 
@@ -96,12 +100,12 @@
 
 ### ⏳ Sezione 2: Ingestione Dati (TODO)
 
-| Test | Priorità | Mock | API Reale | Note |
-|------|----------|------|-----------|------|
-| 2.1 Rate Limit | CRITICA | ✅ 2/2 | ⏭️ TODO | Richiede access token + GSC property |
-| 2.2 Dati Mancanti | CRITICA | ✅ 3/3 | ⏭️ TODO | Richiede GSC con dati |
-| 2.3 Fuso Orario | ALTA | ✅ 4/4 | ⏭️ TODO | Richiede GSC con dati |
-| 2.4 Proprietà Giganti | ALTA | ⚠️ 10/12 | ⏭️ TODO | Batch processing da completare |
+| Test                  | Priorità | Mock     | API Reale | Note                                 |
+| --------------------- | -------- | -------- | --------- | ------------------------------------ |
+| 2.1 Rate Limit        | CRITICA  | ✅ 2/2   | ⏭️ TODO   | Richiede access token + GSC property |
+| 2.2 Dati Mancanti     | CRITICA  | ✅ 3/3   | ⏭️ TODO   | Richiede GSC con dati                |
+| 2.3 Fuso Orario       | ALTA     | ✅ 4/4   | ⏭️ TODO   | Richiede GSC con dati                |
+| 2.4 Proprietà Giganti | ALTA     | ⚠️ 10/12 | ⏭️ TODO   | Batch processing da completare       |
 
 **Completamento Ingestione Dati:** 0/4 test con API reali (prossimo step)
 
@@ -141,6 +145,7 @@
 **Problema:** L'app OAuth era in modalità Testing e l'utente non era nella lista test users
 
 **Soluzione:**
+
 1. Google Cloud Console → OAuth consent screen
 2. Aggiunto `francescascarpellini327@gmail.com` come Test user
 3. ✅ Autorizzazione riuscita
@@ -150,6 +155,7 @@
 **Problema:** Il code OAuth può essere usato una sola volta
 
 **Comportamento corretto:**
+
 - Il code viene scambiato con token al primo utilizzo
 - Tentativi successivi falliscono (come previsto)
 - I token ottenuti rimangono validi

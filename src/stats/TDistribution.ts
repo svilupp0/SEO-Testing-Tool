@@ -7,12 +7,8 @@
  */
 
 const LANCZOS_COEFFICIENTS = [
-  76.18009172947146,
-  -86.50532032941677,
-  24.01409824083091,
-  -1.231739572450155,
-  0.1208650973866179e-2,
-  -0.5395239384953e-5,
+  76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155,
+  0.1208650973866179e-2, -0.5395239384953e-5,
 ];
 
 /**
@@ -38,7 +34,11 @@ export function lnGamma(x: number): number {
  * Regularized Incomplete Beta Function I_x(a, b).
  * Usa l'algoritmo di Lentz per la continued fraction evaluation.
  */
-export function regularizedIncompleteBeta(x: number, a: number, b: number): number {
+export function regularizedIncompleteBeta(
+  x: number,
+  a: number,
+  b: number
+): number {
   if (x === 0) return 0;
   if (x === 1) return 1;
 

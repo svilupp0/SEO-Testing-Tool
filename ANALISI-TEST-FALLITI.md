@@ -18,6 +18,7 @@
 **Test che falliscono:**
 
 1. **"dovrebbe scambiare il codice di autorizzazione con i token di accesso"** (linea 53)
+
    ```typescript
    const tokens = await authService.exchangeCodeForTokens(authorizationCode);
    // ❌ Fa chiamata reale a https://oauth2.googleapis.com/token
@@ -44,6 +45,7 @@
 **Test che falliscono:**
 
 1. **"dovrebbe usare il refresh token per ottenere un nuovo access token"** (linea 65)
+
    ```typescript
    const newTokens = await tokenManager.refreshAccessToken(refreshToken);
    // ❌ Fa chiamata reale a https://oauth2.googleapis.com/token
@@ -51,6 +53,7 @@
    ```
 
 2. **"dovrebbe ottenere un access token valido anche se quello attuale è scaduto"** (linea 172)
+
    ```typescript
    const validToken = await tokenManager.getValidAccessToken(expiredToken);
    // ❌ Chiama refreshAccessToken che fa chiamata reale
@@ -77,6 +80,7 @@
 **File:** [tests/auth/gsc-permissions.test.ts](tests/auth/gsc-permissions.test.ts)
 
 **Errore comune:**
+
 ```
 AssertionError: expected [Function] to throw error including
 'Non hai accesso a questa proprietà su…' but got 'makeRequest non implementato'
@@ -137,6 +141,7 @@ AssertionError: expected [Function] to throw error including
 **Cosa mockare:**
 
 1. **POST `https://oauth2.googleapis.com/token`** (exchange code + refresh)
+
    ```typescript
    // Mock risposta success per exchangeCodeForTokens
    {
@@ -164,6 +169,7 @@ AssertionError: expected [Function] to throw error including
    ```
 
 **Approccio:**
+
 - Usare `vi.spyOn(global, 'fetch')` con `mockResolvedValue`
 - Creare helper function per setup/teardown mock
 - Rendere i mock riutilizzabili in tutti i test
@@ -177,6 +183,7 @@ AssertionError: expected [Function] to throw error including
 **File:** [src/gsc/GSCPermissionService.ts](src/gsc/GSCPermissionService.ts)
 
 **Metodo da implementare:**
+
 ```typescript
 async makeRequest(url: string, accessToken: string): Promise<Response> {
   const response = await fetch(url, {
@@ -199,20 +206,24 @@ async makeRequest(url: string, accessToken: string): Promise<Response> {
 ## 📈 Impatto Atteso
 
 **Dopo Fix 1 (Mock OAuth):**
+
 - ✅ 5 test passeranno
 - ✅ Test suite completamente offline
 - ✅ Test deterministici e veloci
 - **Success Rate:** 66/73 = **90.4%** (da 83.6%)
 
 **Dopo Fix 2 (makeRequest):**
+
 - ✅ 3 test aggiuntivi passeranno
 - **Success Rate:** 69/73 = **94.5%**
 
 **Dopo Fix 3 (Batch Processing):**
+
 - ✅ 2 test aggiuntivi passeranno
 - **Success Rate:** 71/73 = **97.3%**
 
 **Dopo Fix 4 (Feature minori):**
+
 - ✅ 2 test aggiuntivi passeranno
 - **Success Rate:** 73/73 = **100%** 🎯
 

@@ -5,6 +5,7 @@
 **Readiness: 100% — PRONTO per `npm publish`.**
 
 Ultima verifica (2026-02-16):
+
 - Build: OK (`tsc` → `dist/cli.js --version` → `1.0.0`)
 - Test unitari: 182 passati, 7 skipped (OAuth noti)
 - Test E2E: 8/8 passati (incluso tarball test)
@@ -12,6 +13,7 @@ Ultima verifica (2026-02-16):
 - Nome `seo-testing-tool` disponibile su npmjs.com
 
 ### Tutto completato
+
 - [x] 1.1 — tsx e @types/inquirer spostati in devDependencies
 - [x] 1.2 — `"files": ["dist/", "drizzle/"]` aggiunto in package.json
 - [x] 1.3 — Righe drizzle rimossi da .gitignore, migrazioni committate (tutte e 3)
@@ -46,43 +48,54 @@ La CLI seo-testing-tool funzionava perfettamente in locale (clone + npx tsx), ma
 ## 1. Audit: problemi corretti
 
 ### 1.1 Dipendenze nel posto sbagliato ✅
+
 tsx e @types/inquirer spostati in devDependencies.
 
 ### 1.2 Campo files in package.json ✅
+
 `"files": ["dist/", "drizzle/"]` — whitelist esplicita.
 
 ### 1.3 Migrazioni Drizzle ✅
+
 Righe di esclusione rimosse da .gitignore. Tutte e 3 le migrazioni (0000, 0001, 0002) committate.
 
 ### 1.4 Versione dinamica ✅
+
 `createRequire(import.meta.url)` + `require('../package.json')` in cli.ts. ESM valido: `createRequire` e' API standard Node.js, `package.json` e' sempre incluso nei tarball npm, il path `../package.json` da `dist/cli.js` risolve alla root del pacchetto.
 
 ### 1.5 ESM puro in env.ts ✅
+
 require() convertiti a import statici ESM.
 
 ### 1.6 LICENSE ✅
+
 File MIT creato nella root.
 
 ### 1.7 Pulizia dist/ ✅
+
 `"prebuild": "rimraf dist"` elimina artefatti stale prima di ogni build.
 
 ## 2. Bin diretto ✅
 
 Opzione A implementata — bin diretto a `dist/cli.js`:
+
 ```json
 "bin": { "seo-tool": "./dist/cli.js" }
 ```
+
 `bin/seo-tool.mjs` mantenuto per dev locale, escluso da `files`. Script `"dev:cli": "tsx src/cli.ts"` per sviluppo.
 
 ## 3. Pure ESM ✅
 
 Nessun cambiamento necessario:
+
 - `"type": "module"` in package.json
 - chalk v5 (ESM-only)
 - Tutti gli import relativi con estensione `.js`
 - Node 18+ supporto nativo ESM
 
 Campo `exports` aggiunto:
+
 ```json
 "exports": {
   ".": { "import": "./dist/index.js", "types": "./dist/index.d.ts" }
@@ -105,23 +118,23 @@ seo-testing-tool-1.0.0.tgz  (69.4 kB, 94 file)
   LICENSE                auto-incluso
 ```
 
-Escluso: src/, tests/, bin/, *.config.ts, .env, .gitignore.
+Escluso: src/, tests/, bin/, \*.config.ts, .env, .gitignore.
 
 **Path migrazioni:** `db.ts` usa `join(__dirname, '..', '..', 'drizzle')` — da `dist/database/db.js` risale 2 livelli alla root. Funziona sia in sviluppo che dopo npm install.
 
 ## 5. Dependencies runtime ✅
 
-| Pacchetto | Perche' |
-|-----------|---------|
+| Pacchetto      | Perche'                |
+| -------------- | ---------------------- |
 | better-sqlite3 | DB engine (nativo C++) |
-| drizzle-orm | ORM |
-| commander | CLI parsing |
-| chalk | Colori terminale |
-| cli-table3 | Tabelle terminale |
-| asciichart | Grafici ASCII |
-| inquirer | Prompt interattivi |
-| exceljs | Export Excel |
-| dotenv | Env vars |
+| drizzle-orm    | ORM                    |
+| commander      | CLI parsing            |
+| chalk          | Colori terminale       |
+| cli-table3     | Tabelle terminale      |
+| asciichart     | Grafici ASCII          |
+| inquirer       | Prompt interattivi     |
+| exceljs        | Export Excel           |
+| dotenv         | Env vars               |
 
 `"engines": { "node": ">=18.0.0" }`
 
@@ -134,6 +147,7 @@ Config: `vitest.e2e.config.ts` (config dedicata, separata dalla suite principale
 Script: `"test:e2e": "npm run build && vitest run --config vitest.e2e.config.ts"`
 
 Test implementati (8/8 passano):
+
 - [x] `--version` → exit 0, stampa versione da package.json
 - [x] `--help` → exit 0, elenca tutti i comandi
 - [x] `list` → exit 0, "Nessun test" su DB vuoto
@@ -146,6 +160,7 @@ Test implementati (8/8 passano):
 ## 7. Strategia di release ✅
 
 Scripts npm lifecycle:
+
 ```json
 "prebuild": "rimraf dist",
 "build": "tsc",
@@ -183,17 +198,19 @@ Prematura a v1.0. Il codebase ha buona separation of concerns (DI via Orchestrat
 ## 9. Sequenza implementazione — COMPLETATA
 
 ### Fase 1 — Fix fondazioni ✅
+
 - [x] Spostare tsx e @types/inquirer in devDependencies
 - [x] Aggiungere `"files": ["dist/", "drizzle/"]`
 - [x] Cambiare `"bin"` a `{ "seo-tool": "./dist/cli.js" }`
 - [x] Aggiungere `"prebuild": "rimraf dist"` + rimraf devDep
-- [x] Rimuovere drizzle/meta/ e drizzle/*.sql da .gitignore
+- [x] Rimuovere drizzle/meta/ e drizzle/\*.sql da .gitignore
 - [x] Committare tutte le migrazioni Drizzle (0000, 0001, 0002)
 - [x] Convertire require() in env.ts a import ESM statici
 - [x] Versione dinamica in cli.ts via createRequire
 - [x] Creare file LICENSE (MIT)
 
 ### Fase 2 — Test E2E ✅
+
 - [x] Scrivere test E2E per --version
 - [x] Build + fix fino a GREEN
 - [x] Aggiungere test per ogni comando (7 test)
@@ -202,11 +219,13 @@ Prematura a v1.0. Il codebase ha buona separation of concerns (DI via Orchestrat
 - [x] Fix parsing output npm pack su Windows
 
 ### Fase 3 — Release pipeline ✅
+
 - [x] Aggiungere prepack, prepublishOnly, postbuild
 - [x] `npm pack --dry-run` verificato (94 file, 69.4 kB)
 - [x] Test installazione da tarball in directory isolata (via E2E)
 
 ### Fase 4 — Polish ✅
+
 - [x] README: sezione `npm install -g seo-testing-tool` + Quick Start con `seo-tool`
 - [x] Rimossa sezione "Installazione come comando globale" (ridondante)
 - [x] `author`: `"Francesca <francesca@example.com>"`

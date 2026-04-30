@@ -1,17 +1,17 @@
 /**
  * Test 1.3 - Test Revoca Accesso
- * 
+ *
  * Priorità: ALTA
- * 
- * Obiettivo: Verificare che il sistema reagisca correttamente se l'utente 
+ *
+ * Obiettivo: Verificare che il sistema reagisca correttamente se l'utente
  * revoca l'accesso da Google
- * 
+ *
  * Scenario: L'utente scollega l'app dalle impostazioni Google
- * 
- * Risultato atteso: Il sistema smette di tentare il fetch, mostra: 
+ *
+ * Risultato atteso: Il sistema smette di tentare il fetch, mostra:
  * "Accesso revocato. Riconnetti il tuo account Google."
- * 
- * Comportamento su fallimento: Non deve continuare a fare richieste fallite 
+ *
+ * Comportamento su fallimento: Non deve continuare a fare richieste fallite
  * generando errori 401
  */
 
@@ -60,9 +60,9 @@ describe('Test 1.3 - Revoca Accesso', () => {
     );
 
     // Act & Assert: Tentativo di refresh dovrebbe rilevare la revoca
-    await expect(
-      tokenManager.refreshAccessToken(userId)
-    ).rejects.toThrow('Accesso revocato. Riconnetti il tuo account Google.');
+    await expect(tokenManager.refreshAccessToken(userId)).rejects.toThrow(
+      'Accesso revocato. Riconnetti il tuo account Google.'
+    );
   });
 
   it('dovrebbe rilevare errore 401 Unauthorized come segnale di revoca', async () => {
@@ -92,16 +92,18 @@ describe('Test 1.3 - Revoca Accesso', () => {
 
     // Act & Assert: Verifichiamo che il sistema rilevi la revoca
     const result = await tokenManager.validateAccessToken(accessToken);
-    
+
     expect(result.isValid).toBe(false);
     expect(result.isRevoked).toBe(true);
-    expect(result.errorMessage).toBe('Accesso revocato. Riconnetti il tuo account Google.');
+    expect(result.errorMessage).toBe(
+      'Accesso revocato. Riconnetti il tuo account Google.'
+    );
   });
 
   it('dovrebbe marcare i token come revocati nel database dopo rilevamento', async () => {
     // Arrange: Utente con token revocato
     const userId = 'user-789';
-    
+
     await tokenManager.saveTokens(userId, {
       access_token: 'revoked-token',
       refresh_token: 'revoked-refresh',
@@ -111,10 +113,7 @@ describe('Test 1.3 - Revoca Accesso', () => {
 
     // Simuliamo errore di revoca
     vi.spyOn(global, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ error: 'invalid_grant' }),
-        { status: 400 }
-      )
+      new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 400 })
     );
 
     // Act: Tentiamo il refresh che fallisce per revoca
@@ -126,7 +125,7 @@ describe('Test 1.3 - Revoca Accesso', () => {
 
     // Assert: I token devono essere marcati come revocati
     const tokenStatus = await tokenManager.getTokenStatus(userId);
-    
+
     expect(tokenStatus.isRevoked).toBe(true);
     expect(tokenStatus.revokedAt).toBeDefined();
     expect(tokenStatus.revokedAt).toBeInstanceOf(Date);
@@ -135,7 +134,7 @@ describe('Test 1.3 - Revoca Accesso', () => {
   it('NON dovrebbe continuare a fare richieste dopo aver rilevato la revoca', async () => {
     // Arrange: Utente con token revocato
     const userId = 'user-multi-request';
-    
+
     await tokenManager.saveTokens(userId, {
       access_token: 'revoked-token',
       refresh_token: 'revoked-refresh',
@@ -145,13 +144,10 @@ describe('Test 1.3 - Revoca Accesso', () => {
 
     // Mock che conta le chiamate
     const fetchSpy = vi.spyOn(global, 'fetch');
-    
+
     // Prima chiamata: rileva la revoca
     fetchSpy.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ error: 'invalid_grant' }),
-        { status: 400 }
-      )
+      new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 400 })
     );
 
     // Act: Prima richiesta rileva la revoca
@@ -178,7 +174,7 @@ describe('Test 1.3 - Revoca Accesso', () => {
   it('dovrebbe permettere la riconnessione dopo la revoca', async () => {
     // Arrange: Utente con accesso precedentemente revocato
     const userId = 'user-reconnect';
-    
+
     // Simuliamo token revocato
     await tokenManager.saveTokens(userId, {
       access_token: 'old-revoked-token',
@@ -240,7 +236,7 @@ describe('Test 1.3 - Revoca Accesso', () => {
   it('dovrebbe restituire un messaggio chiaro quando si tenta di usare token revocati', async () => {
     // Arrange: Utente con token revocato
     const userId = 'user-clear-message';
-    
+
     await tokenManager.saveTokens(userId, {
       access_token: 'revoked-token',
       refresh_token: 'revoked-refresh',
@@ -255,14 +251,16 @@ describe('Test 1.3 - Revoca Accesso', () => {
 
     // Assert: Deve restituire errore chiaro
     expect(result.success).toBe(false);
-    expect(result.error).toBe('Accesso revocato. Riconnetti il tuo account Google.');
+    expect(result.error).toBe(
+      'Accesso revocato. Riconnetti il tuo account Google.'
+    );
     expect(result.token).toBeNull();
   });
 
   it('dovrebbe distinguere tra revoca e altri errori API', async () => {
     // Arrange: Setup per testare diversi tipi di errore
     const userId = 'user-error-types';
-    
+
     await tokenManager.saveTokens(userId, {
       access_token: 'test-token',
       refresh_token: 'test-refresh',
@@ -275,9 +273,9 @@ describe('Test 1.3 - Revoca Accesso', () => {
       new Error('Network timeout')
     );
 
-    await expect(
-      tokenManager.refreshAccessToken(userId)
-    ).rejects.toThrow('Errore di rete');
+    await expect(tokenManager.refreshAccessToken(userId)).rejects.toThrow(
+      'Errore di rete'
+    );
 
     // Verifichiamo che NON sia stato marcato come revocato
     let status = await tokenManager.getTokenStatus(userId);
@@ -288,24 +286,21 @@ describe('Test 1.3 - Revoca Accesso', () => {
       new Response('Internal Server Error', { status: 500 })
     );
 
-    await expect(
-      tokenManager.refreshAccessToken(userId)
-    ).rejects.toThrow('Errore del server Google');
+    await expect(tokenManager.refreshAccessToken(userId)).rejects.toThrow(
+      'Errore del server Google'
+    );
 
     status = await tokenManager.getTokenStatus(userId);
     expect(status.isRevoked).toBe(false);
 
     // Test 3: Errore invalid_grant (È REVOCA!)
     vi.spyOn(global, 'fetch').mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ error: 'invalid_grant' }),
-        { status: 400 }
-      )
+      new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 400 })
     );
 
-    await expect(
-      tokenManager.refreshAccessToken(userId)
-    ).rejects.toThrow('Accesso revocato. Riconnetti il tuo account Google.');
+    await expect(tokenManager.refreshAccessToken(userId)).rejects.toThrow(
+      'Accesso revocato. Riconnetti il tuo account Google.'
+    );
 
     status = await tokenManager.getTokenStatus(userId);
     expect(status.isRevoked).toBe(true);

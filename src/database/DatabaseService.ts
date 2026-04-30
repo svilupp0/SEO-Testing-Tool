@@ -47,7 +47,11 @@ export class DatabaseService {
   /**
    * Test 5.1 - Aggiorna test (con gestione race condition)
    */
-  async updateTest(testId: string, updates: Record<string, unknown>, userId: string) {
+  async updateTest(
+    testId: string,
+    updates: Record<string, unknown>,
+    userId: string
+  ) {
     const result = this.db
       .update(tests)
       .set({ ...updates, updatedAt: new Date().toISOString() } as any)
@@ -69,27 +73,33 @@ export class DatabaseService {
   async createTestWithMetrics(
     testData: { name: string; startDate: string; urls: string[] },
     metricsData: { date: string; clicks: number; impressions: number }[],
-    userId: string,
+    userId: string
   ) {
     return this.db.transaction((tx) => {
-      const test = tx.insert(tests).values({
-        name: testData.name,
-        startDate: new Date(testData.startDate).toISOString(),
-        splitDate: new Date(testData.startDate).toISOString(),
-        siteUrl: '',
-        urls: JSON.stringify(testData.urls),
-        userId,
-      }).returning().get();
+      const test = tx
+        .insert(tests)
+        .values({
+          name: testData.name,
+          startDate: new Date(testData.startDate).toISOString(),
+          splitDate: new Date(testData.startDate).toISOString(),
+          siteUrl: '',
+          urls: JSON.stringify(testData.urls),
+          userId,
+        })
+        .returning()
+        .get();
 
       if (metricsData.length > 0) {
-        tx.insert(metrics).values(
-          metricsData.map((m) => ({
-            testId: test.id,
-            date: new Date(m.date).toISOString(),
-            clicks: m.clicks,
-            impressions: m.impressions,
-          })),
-        ).run();
+        tx.insert(metrics)
+          .values(
+            metricsData.map((m) => ({
+              testId: test.id,
+              date: new Date(m.date).toISOString(),
+              clicks: m.clicks,
+              impressions: m.impressions,
+            }))
+          )
+          .run();
       }
 
       return {
@@ -133,8 +143,8 @@ export class DatabaseService {
         and(
           eq(metrics.testId, testId),
           gte(metrics.date, new Date(startDate).toISOString()),
-          lte(metrics.date, new Date(endDate).toISOString()),
-        ),
+          lte(metrics.date, new Date(endDate).toISOString())
+        )
       )
       .orderBy(metrics.date)
       .all();

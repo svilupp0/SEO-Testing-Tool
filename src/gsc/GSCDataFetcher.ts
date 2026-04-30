@@ -63,7 +63,11 @@ export class GSCDataFetcher {
   private readonly INITIAL_DELAY = 1000; // 1 secondo
   private permissionService: GSCPermissionService;
   private retryCount = 0;
-  private retryWarnings: Array<{ type: string; message?: string; startRow?: number }> = [];
+  private retryWarnings: Array<{
+    type: string;
+    message?: string;
+    startRow?: number;
+  }> = [];
 
   constructor(permissionService?: GSCPermissionService) {
     this.permissionService = permissionService || new GSCPermissionService();
@@ -87,7 +91,7 @@ export class GSCDataFetcher {
       {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${params.accessToken}`,
+          Authorization: `Bearer ${params.accessToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -100,20 +104,25 @@ export class GSCDataFetcher {
     );
 
     if (response.status === 403) {
-      throw Object.assign(new Error('Non hai accesso a questa proprietà su Google Search Console.'), {
-        status: 403
-      });
+      throw Object.assign(
+        new Error(
+          'Non hai accesso a questa proprietà su Google Search Console.'
+        ),
+        {
+          status: 403,
+        }
+      );
     }
 
     if (response.status === 429) {
       throw Object.assign(new Error('Rate limit exceeded'), {
-        status: 429
+        status: 429,
       });
     }
 
     if (!response.ok) {
       throw Object.assign(new Error('Errore durante il fetch dei dati'), {
-        status: response.status
+        status: response.status,
       });
     }
 
@@ -124,13 +133,16 @@ export class GSCDataFetcher {
    * Implementa exponential backoff per gestire rate limiting
    */
   private async delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
    * Fetch con retry e exponential backoff
    */
-  private async fetchWithRetry(params: SearchAnalyticsParams, attempt: number = 0): Promise<any> {
+  private async fetchWithRetry(
+    params: SearchAnalyticsParams,
+    attempt: number = 0
+  ): Promise<any> {
     try {
       return await this.makeRequest(params);
     } catch (error: any) {
@@ -140,12 +152,15 @@ export class GSCDataFetcher {
         this.retryWarnings.push({
           type: 'BATCH_RETRY',
           startRow: params.startRow || 0,
-          message: `Retry del batch a startRow ${params.startRow || 0}`
+          message: `Retry del batch a startRow ${params.startRow || 0}`,
         });
       }
 
       // Gestione rate limit (429) o errori 500
-      if ((error.status === 429 || error.status === 500) && attempt < this.MAX_RETRIES) {
+      if (
+        (error.status === 429 || error.status === 500) &&
+        attempt < this.MAX_RETRIES
+      ) {
         // Exponential backoff: 1s, 2s, 4s, 8s, 16s
         const delayMs = this.INITIAL_DELAY * Math.pow(2, attempt);
         await this.delay(delayMs);
@@ -174,7 +189,10 @@ export class GSCDataFetcher {
   /**
    * Rileva gap temporali nei dati
    */
-  private detectDataGap(rows: SearchAnalyticsRow[], endDate: string): {
+  private detectDataGap(
+    rows: SearchAnalyticsRow[],
+    endDate: string
+  ): {
     hasGap: boolean;
     gapDays: number;
     lastDate: string | null;
@@ -184,7 +202,7 @@ export class GSCDataFetcher {
     }
 
     // Trova l'ultima data disponibile
-    const dates = rows.map(row => row.date || row.keys[0]).sort();
+    const dates = rows.map((row) => row.date || row.keys[0]).sort();
     const lastAvailableDate = dates[dates.length - 1];
 
     // Calcola il gap tra l'ultima data disponibile e la data richiesta
@@ -197,14 +215,18 @@ export class GSCDataFetcher {
     return {
       hasGap,
       gapDays: hasGap ? gapDays : 0,
-      lastDate: lastAvailableDate
+      lastDate: lastAvailableDate,
     };
   }
 
   /**
    * Calcola statistiche dai dati
    */
-  private calculateStats(rows: SearchAnalyticsRow[], startDate: string, endDate: string): {
+  private calculateStats(
+    rows: SearchAnalyticsRow[],
+    startDate: string,
+    endDate: string
+  ): {
     averageClicks: number;
     totalClicks: number;
     totalImpressions: number;
@@ -212,7 +234,10 @@ export class GSCDataFetcher {
     daysRequested: number;
   } {
     const totalClicks = rows.reduce((sum, row) => sum + row.clicks, 0);
-    const totalImpressions = rows.reduce((sum, row) => sum + row.impressions, 0);
+    const totalImpressions = rows.reduce(
+      (sum, row) => sum + row.impressions,
+      0
+    );
     const daysWithData = rows.length;
     const daysRequested = this.daysBetween(startDate, endDate) + 1;
     const averageClicks = daysWithData > 0 ? totalClicks / daysWithData : 0;
@@ -222,7 +247,7 @@ export class GSCDataFetcher {
       totalClicks,
       totalImpressions,
       daysWithData,
-      daysRequested
+      daysRequested,
     };
   }
 
@@ -232,7 +257,9 @@ export class GSCDataFetcher {
     propertyUrl: string,
     options: { startDate: string; endDate: string }
   ): Promise<SearchAnalyticsData>;
-  async fetchSearchAnalytics(params: SearchAnalyticsParams): Promise<SearchAnalyticsData>;
+  async fetchSearchAnalytics(
+    params: SearchAnalyticsParams
+  ): Promise<SearchAnalyticsData>;
 
   // Implementation
   async fetchSearchAnalytics(
@@ -248,7 +275,10 @@ export class GSCDataFetcher {
       }
 
       // Verifica i permessi PRIMA di fare il fetch
-      await this.permissionService.checkPropertyAccess(accessToken, propertyUrl);
+      await this.permissionService.checkPropertyAccess(
+        accessToken,
+        propertyUrl
+      );
 
       // Se arriviamo qui, i permessi sono OK, procedi con il fetch
       return this.fetchSearchAnalyticsInternal({
@@ -263,10 +293,16 @@ export class GSCDataFetcher {
     return this.fetchSearchAnalyticsInternal(paramsOrAccessToken);
   }
 
-  private async fetchSearchAnalyticsInternal(params: SearchAnalyticsParams): Promise<SearchAnalyticsData> {
+  private async fetchSearchAnalyticsInternal(
+    params: SearchAnalyticsParams
+  ): Promise<SearchAnalyticsData> {
     const PAGE_SIZE = 25000;
     const allRows: SearchAnalyticsRow[] = [];
-    const warnings: Array<{ type: string; message?: string; startRow?: number }> = [];
+    const warnings: Array<{
+      type: string;
+      message?: string;
+      startRow?: number;
+    }> = [];
     let totalPages = 0;
     let peakMemoryUsageMB = 0;
     let progressCallbackInvoked = false;
@@ -283,16 +319,19 @@ export class GSCDataFetcher {
 
       let startRow = 0;
       let totalRows: number | undefined;
-      
+
       while (true) {
         // Se conosciamo il totale e abbiamo già tutto, esci
         if (totalRows !== undefined && startRow >= totalRows) {
           break;
         }
-        
+
         // Calcola progresso
         if (params.onProgress && allRows.length > 0 && totalRows) {
-          const progress = Math.min(100, Math.round((allRows.length / totalRows) * 100));
+          const progress = Math.min(
+            100,
+            Math.round((allRows.length / totalRows) * 100)
+          );
           params.onProgress(progress);
           progressCallbackInvoked = true;
         }
@@ -308,17 +347,20 @@ export class GSCDataFetcher {
           }
 
           // Verifica limite memoria PRIMA di processare nuovi dati
-          if (params.maxMemoryMB && (allRows.length + PAGE_SIZE) * 0.001 >= params.maxMemoryMB) {
+          if (
+            params.maxMemoryMB &&
+            (allRows.length + PAGE_SIZE) * 0.001 >= params.maxMemoryMB
+          ) {
             // Non aggiungere questi dati, siamo al limite
             warnings.push({
               type: 'MEMORY_LIMIT',
-              message: 'Raggiunto il limite di memoria configurato'
+              message: 'Raggiunto il limite di memoria configurato',
             });
             break;
           }
 
           // Simula monitoraggio memoria (minimo per passare i test)
-          const estimatedMemoryMB = (allRows.length * 0.001); // ~1KB per riga
+          const estimatedMemoryMB = allRows.length * 0.001; // ~1KB per riga
           if (estimatedMemoryMB > peakMemoryUsageMB) {
             peakMemoryUsageMB = estimatedMemoryMB;
           }
@@ -336,7 +378,7 @@ export class GSCDataFetcher {
           throw error;
         }
       }
-      
+
       // Progresso finale
       if (params.onProgress) {
         params.onProgress(100);
@@ -345,8 +387,11 @@ export class GSCDataFetcher {
 
       // Calcola statistiche
       const totalClicks = allRows.reduce((sum, row) => sum + row.clicks, 0);
-      const totalImpressions = allRows.reduce((sum, row) => sum + row.impressions, 0);
-      
+      const totalImpressions = allRows.reduce(
+        (sum, row) => sum + row.impressions,
+        0
+      );
+
       const result: SearchAnalyticsData = {
         rows: allRows,
         totalRows: allRows.length,
@@ -355,7 +400,7 @@ export class GSCDataFetcher {
           totalClicks,
           totalImpressions,
           daysWithData: allRows.length,
-          daysRequested: this.daysBetween(params.startDate, params.endDate) + 1
+          daysRequested: this.daysBetween(params.startDate, params.endDate) + 1,
         },
         processingInfo: {
           totalPages,
@@ -363,8 +408,10 @@ export class GSCDataFetcher {
           retriesPerformed: this.retryCount,
           progressCallbackInvoked,
           peakMemoryUsageMB,
-          memoryLimitReached: params.maxMemoryMB ? peakMemoryUsageMB >= params.maxMemoryMB : false
-        }
+          memoryLimitReached: params.maxMemoryMB
+            ? peakMemoryUsageMB >= params.maxMemoryMB
+            : false,
+        },
       };
 
       // Combina warnings locali con retry warnings
@@ -383,16 +430,21 @@ export class GSCDataFetcher {
     const gapInfo = this.detectDataGap(rawData.rows, params.endDate);
 
     // Calcola statistiche
-    const stats = this.calculateStats(rawData.rows, params.startDate, params.endDate);
+    const stats = this.calculateStats(
+      rawData.rows,
+      params.startDate,
+      params.endDate
+    );
 
     // Gestione timezone
     const timezone = params.timezone || 'UTC';
-    const timezoneWarning = params.timezone 
+    const timezoneWarning = params.timezone
       ? `I dati di Google Search Console sono in PST/PDT. Visualizzazione in ${params.timezone}.`
       : 'Timezone non specificato. Usando UTC come default.';
 
     // Gestione DST (Daylight Saving Time)
-    const dstHandling = 'DST gestito automaticamente secondo le regole del fuso orario specificato';
+    const dstHandling =
+      'DST gestito automaticamente secondo le regole del fuso orario specificato';
 
     // Costruisci il risultato
     const result: SearchAnalyticsData = {
@@ -402,7 +454,7 @@ export class GSCDataFetcher {
       stats,
       timezone,
       timezoneWarning,
-      dstHandling
+      dstHandling,
     };
 
     // Aggiungi messaggio se c'è un gap
@@ -418,7 +470,10 @@ export class GSCDataFetcher {
   /**
    * Fetch con richieste parallele per migliorare le performance
    */
-  private async fetchWithConcurrency(params: SearchAnalyticsParams, PAGE_SIZE: number): Promise<SearchAnalyticsData> {
+  private async fetchWithConcurrency(
+    params: SearchAnalyticsParams,
+    PAGE_SIZE: number
+  ): Promise<SearchAnalyticsData> {
     const allRows: SearchAnalyticsRow[] = [];
     let totalPages = 0;
     let peakMemoryUsageMB = 0;
@@ -428,7 +483,10 @@ export class GSCDataFetcher {
 
     // Calcola quanti batch servono - usa il mock per determinare il totale
     // Fai una prima chiamata per capire la dimensione
-    const firstBatchData = await this.fetchWithRetry({ ...params, startRow: 0 });
+    const firstBatchData = await this.fetchWithRetry({
+      ...params,
+      startRow: 0,
+    });
     allRows.push(...(firstBatchData.rows || []));
     totalPages++;
 
@@ -442,11 +500,18 @@ export class GSCDataFetcher {
         rows: allRows,
         totalRows: allRows.length,
         stats: {
-          averageClicks: allRows.length > 0 ? allRows.reduce((sum, row) => sum + row.clicks, 0) / allRows.length : 0,
+          averageClicks:
+            allRows.length > 0
+              ? allRows.reduce((sum, row) => sum + row.clicks, 0) /
+                allRows.length
+              : 0,
           totalClicks: allRows.reduce((sum, row) => sum + row.clicks, 0),
-          totalImpressions: allRows.reduce((sum, row) => sum + row.impressions, 0),
+          totalImpressions: allRows.reduce(
+            (sum, row) => sum + row.impressions,
+            0
+          ),
           daysWithData: allRows.length,
-          daysRequested: this.daysBetween(params.startDate, params.endDate) + 1
+          daysRequested: this.daysBetween(params.startDate, params.endDate) + 1,
         },
         processingInfo: {
           totalPages,
@@ -454,9 +519,10 @@ export class GSCDataFetcher {
           retriesPerformed: this.retryCount,
           progressCallbackInvoked: false,
           peakMemoryUsageMB,
-          memoryLimitReached: false
+          memoryLimitReached: false,
         },
-        warnings: this.retryWarnings.length > 0 ? this.retryWarnings : undefined
+        warnings:
+          this.retryWarnings.length > 0 ? this.retryWarnings : undefined,
       };
     }
 
@@ -465,24 +531,30 @@ export class GSCDataFetcher {
     let startRow = PAGE_SIZE;
 
     // Se abbiamo totalRows, possiamo essere precisi. Altrimenti, continua fino a batch vuoti.
-    while (lastBatchSize === PAGE_SIZE && (totalRows === undefined || startRow < totalRows)) {
+    while (
+      lastBatchSize === PAGE_SIZE &&
+      (totalRows === undefined || startRow < totalRows)
+    ) {
       const batchPromises: Promise<any>[] = [];
 
       // Determina quanti batch creare in questo ciclo
-      const batchesToCreate = totalRows !== undefined
-        ? Math.min(concurrency, Math.ceil((totalRows - startRow) / PAGE_SIZE))
-        : concurrency;
+      const batchesToCreate =
+        totalRows !== undefined
+          ? Math.min(concurrency, Math.ceil((totalRows - startRow) / PAGE_SIZE))
+          : concurrency;
 
       // Crea batch in parallelo
       for (let i = 0; i < batchesToCreate; i++) {
-        const currentStartRow = startRow + (i * PAGE_SIZE);
+        const currentStartRow = startRow + i * PAGE_SIZE;
 
         // Se conosciamo totalRows, non andare oltre
         if (totalRows !== undefined && currentStartRow >= totalRows) {
           break;
         }
 
-        batchPromises.push(this.fetchWithRetry({ ...params, startRow: currentStartRow }));
+        batchPromises.push(
+          this.fetchWithRetry({ ...params, startRow: currentStartRow })
+        );
       }
 
       if (batchPromises.length === 0) {
@@ -525,11 +597,17 @@ export class GSCDataFetcher {
       rows: allRows,
       totalRows: allRows.length,
       stats: {
-        averageClicks: allRows.length > 0 ? allRows.reduce((sum, row) => sum + row.clicks, 0) / allRows.length : 0,
+        averageClicks:
+          allRows.length > 0
+            ? allRows.reduce((sum, row) => sum + row.clicks, 0) / allRows.length
+            : 0,
         totalClicks: allRows.reduce((sum, row) => sum + row.clicks, 0),
-        totalImpressions: allRows.reduce((sum, row) => sum + row.impressions, 0),
+        totalImpressions: allRows.reduce(
+          (sum, row) => sum + row.impressions,
+          0
+        ),
         daysWithData: allRows.length,
-        daysRequested: this.daysBetween(params.startDate, params.endDate) + 1
+        daysRequested: this.daysBetween(params.startDate, params.endDate) + 1,
       },
       processingInfo: {
         totalPages,
@@ -537,9 +615,9 @@ export class GSCDataFetcher {
         retriesPerformed: this.retryCount,
         progressCallbackInvoked: false,
         peakMemoryUsageMB,
-        memoryLimitReached: false
+        memoryLimitReached: false,
       },
-      warnings: this.retryWarnings.length > 0 ? this.retryWarnings : undefined
+      warnings: this.retryWarnings.length > 0 ? this.retryWarnings : undefined,
     };
   }
 }

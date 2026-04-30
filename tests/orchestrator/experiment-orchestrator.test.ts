@@ -11,7 +11,12 @@
 
 import { eq } from 'drizzle-orm';
 import { SEOExperimentOrchestrator } from '../../src/orchestrator/SEOExperimentOrchestrator';
-import { createTestDb, seedUser, seedTest, type TestDB } from '../helpers/test-db';
+import {
+  createTestDb,
+  seedUser,
+  seedTest,
+  type TestDB,
+} from '../helpers/test-db';
 import { tests, metrics, auditLogs } from '../../src/database/schema';
 
 // --- Mock Factories ---
@@ -38,7 +43,13 @@ function createMockNotificationService() {
 // --- Helpers ---
 
 /** Inserisce metriche nel DB reale per un range di date */
-function insertMetrics(db: TestDB, testId: string, startDate: string, days: number, baseClicks: number) {
+function insertMetrics(
+  db: TestDB,
+  testId: string,
+  startDate: string,
+  days: number,
+  baseClicks: number
+) {
   const rows = Array.from({ length: days }, (_, i) => {
     const date = new Date(startDate);
     date.setDate(date.getDate() + i);
@@ -87,13 +98,25 @@ describe('Test 9.1 - Esecuzione Singolo Esperimento', () => {
     insertMetrics(db, 'test-123', '2024-01-15', 14, 150);
 
     mockToken.getValidAccessToken.mockResolvedValue({
-      success: true, error: null, token: 'valid-access-token',
+      success: true,
+      error: null,
+      token: 'valid-access-token',
     });
     mockGSC.fetchSearchAnalytics.mockResolvedValue({
-      rows: [{ keys: ['2024-01-28'], clicks: 155, impressions: 1500, date: '2024-01-28' }],
+      rows: [
+        {
+          keys: ['2024-01-28'],
+          clicks: 155,
+          impressions: 1500,
+          date: '2024-01-28',
+        },
+      ],
     });
     mockTimeSeries.saveData.mockResolvedValue(undefined);
-    mockNotification.sendVictoryAlert.mockResolvedValue({ sent: false, reason: 'not_significant' });
+    mockNotification.sendVictoryAlert.mockResolvedValue({
+      sent: false,
+      reason: 'not_significant',
+    });
 
     // Act
     const result = await orchestrator.runExperiment('test-123');
@@ -103,7 +126,7 @@ describe('Test 9.1 - Esecuzione Singolo Esperimento', () => {
     expect(mockGSC.fetchSearchAnalytics).toHaveBeenCalledWith(
       'valid-access-token',
       'sc-domain:example.com',
-      expect.objectContaining({ startDate: '2024-01-01' }),
+      expect.objectContaining({ startDate: '2024-01-01' })
     );
     expect(mockTimeSeries.saveData).toHaveBeenCalled();
     expect(result.testId).toBe('test-123');
@@ -116,7 +139,11 @@ describe('Test 9.1 - Esecuzione Singolo Esperimento', () => {
     insertMetrics(db, 'test-123', '2024-01-01', 14, 100);
     insertMetrics(db, 'test-123', '2024-01-15', 14, 100);
 
-    mockToken.getValidAccessToken.mockResolvedValue({ success: true, error: null, token: 'tok' });
+    mockToken.getValidAccessToken.mockResolvedValue({
+      success: true,
+      error: null,
+      token: 'tok',
+    });
     mockGSC.fetchSearchAnalytics.mockResolvedValue({ rows: [] });
     mockTimeSeries.saveData.mockResolvedValue(undefined);
     mockNotification.sendVictoryAlert.mockResolvedValue({ sent: false });
@@ -128,26 +155,38 @@ describe('Test 9.1 - Esecuzione Singolo Esperimento', () => {
   });
 
   it('dovrebbe lanciare errore se il test non esiste', async () => {
-    await expect(orchestrator.runExperiment('non-existent'))
-      .rejects.toThrow('non trovato');
+    await expect(orchestrator.runExperiment('non-existent')).rejects.toThrow(
+      'non trovato'
+    );
   });
 
   it('dovrebbe lanciare errore se il test non ha status running', async () => {
-    db.update(tests).set({ status: 'completed' }).where(eq(tests.id, 'test-123')).run();
+    db.update(tests)
+      .set({ status: 'completed' })
+      .where(eq(tests.id, 'test-123'))
+      .run();
 
-    await expect(orchestrator.runExperiment('test-123'))
-      .rejects.toThrow('non è in esecuzione');
+    await expect(orchestrator.runExperiment('test-123')).rejects.toThrow(
+      'non è in esecuzione'
+    );
   });
 
   it('dovrebbe gestire errore token non valido e aggiornare status a failed', async () => {
     mockToken.getValidAccessToken.mockResolvedValue({
-      success: false, error: 'Token scaduto', token: null,
+      success: false,
+      error: 'Token scaduto',
+      token: null,
     });
 
-    await expect(orchestrator.runExperiment('test-123'))
-      .rejects.toThrow('Token non valido');
+    await expect(orchestrator.runExperiment('test-123')).rejects.toThrow(
+      'Token non valido'
+    );
 
-    const updated = db.select().from(tests).where(eq(tests.id, 'test-123')).get();
+    const updated = db
+      .select()
+      .from(tests)
+      .where(eq(tests.id, 'test-123'))
+      .get();
     expect(updated?.status).toBe('failed');
   });
 
@@ -155,7 +194,11 @@ describe('Test 9.1 - Esecuzione Singolo Esperimento', () => {
     insertMetrics(db, 'test-123', '2024-01-01', 3, 100);
     insertMetrics(db, 'test-123', '2024-01-15', 3, 150);
 
-    mockToken.getValidAccessToken.mockResolvedValue({ success: true, error: null, token: 'tok' });
+    mockToken.getValidAccessToken.mockResolvedValue({
+      success: true,
+      error: null,
+      token: 'tok',
+    });
     mockGSC.fetchSearchAnalytics.mockResolvedValue({ rows: [] });
     mockTimeSeries.saveData.mockResolvedValue(undefined);
 
@@ -197,7 +240,11 @@ describe('Test 9.2 - Notifiche su Risultati Significativi', () => {
       tokenManager: mockToken as any,
     });
 
-    mockToken.getValidAccessToken.mockResolvedValue({ success: true, error: null, token: 'tok' });
+    mockToken.getValidAccessToken.mockResolvedValue({
+      success: true,
+      error: null,
+      token: 'tok',
+    });
     mockGSC.fetchSearchAnalytics.mockResolvedValue({ rows: [] });
     mockTimeSeries.saveData.mockResolvedValue(undefined);
   });
@@ -207,14 +254,26 @@ describe('Test 9.2 - Notifiche su Risultati Significativi', () => {
     const beforeRows = Array.from({ length: 30 }, (_, i) => {
       const date = new Date('2024-01-01');
       date.setDate(date.getDate() + i);
-      return { testId: 'test-123', date: date.toISOString(), clicks: beforeClicks, impressions: 1000 };
+      return {
+        testId: 'test-123',
+        date: date.toISOString(),
+        clicks: beforeClicks,
+        impressions: 1000,
+      };
     });
     const afterRows = Array.from({ length: 30 }, (_, i) => {
       const date = new Date('2024-02-01');
       date.setDate(date.getDate() + i);
-      return { testId: 'test-123', date: date.toISOString(), clicks: afterClicks, impressions: 1000 };
+      return {
+        testId: 'test-123',
+        date: date.toISOString(),
+        clicks: afterClicks,
+        impressions: 1000,
+      };
     });
-    db.insert(metrics).values([...beforeRows, ...afterRows]).run();
+    db.insert(metrics)
+      .values([...beforeRows, ...afterRows])
+      .run();
   }
 
   it('dovrebbe inviare notifica quando analisi rileva miglioramento significativo', async () => {
@@ -288,14 +347,26 @@ describe('Test 9.3 - Sincronizzazione Tutti i Test Attivi', () => {
     const beforeRows = Array.from({ length: 14 }, (_, i) => {
       const date = new Date('2024-01-01');
       date.setDate(date.getDate() + i);
-      return { testId, date: date.toISOString(), clicks: 100, impressions: 1000 };
+      return {
+        testId,
+        date: date.toISOString(),
+        clicks: 100,
+        impressions: 1000,
+      };
     });
     const afterRows = Array.from({ length: 14 }, (_, i) => {
       const date = new Date('2024-01-15');
       date.setDate(date.getDate() + i);
-      return { testId, date: date.toISOString(), clicks: 100, impressions: 1000 };
+      return {
+        testId,
+        date: date.toISOString(),
+        clicks: 100,
+        impressions: 1000,
+      };
     });
-    db.insert(metrics).values([...beforeRows, ...afterRows]).run();
+    db.insert(metrics)
+      .values([...beforeRows, ...afterRows])
+      .run();
   }
 
   it('dovrebbe iterare tutti i test con status running', async () => {
@@ -303,7 +374,11 @@ describe('Test 9.3 - Sincronizzazione Tutti i Test Attivi', () => {
     insertTestWithMetrics('test-2', 'user-2');
     insertTestWithMetrics('test-3', 'user-3');
 
-    mockToken.getValidAccessToken.mockResolvedValue({ success: true, error: null, token: 'tok' });
+    mockToken.getValidAccessToken.mockResolvedValue({
+      success: true,
+      error: null,
+      token: 'tok',
+    });
     mockGSC.fetchSearchAnalytics.mockResolvedValue({ rows: [] });
     mockTimeSeries.saveData.mockResolvedValue(undefined);
 
@@ -315,14 +390,18 @@ describe('Test 9.3 - Sincronizzazione Tutti i Test Attivi', () => {
     expect(result.results).toHaveLength(3);
   });
 
-  it('dovrebbe continuare se un test fallisce e riportare l\'errore', async () => {
+  it("dovrebbe continuare se un test fallisce e riportare l'errore", async () => {
     insertTestWithMetrics('test-1', 'user-1');
     insertTestWithMetrics('test-2', 'user-2');
     insertTestWithMetrics('test-3', 'user-3');
 
     mockToken.getValidAccessToken
       .mockResolvedValueOnce({ success: true, error: null, token: 'tok' })
-      .mockResolvedValueOnce({ success: false, error: 'Token scaduto', token: null })
+      .mockResolvedValueOnce({
+        success: false,
+        error: 'Token scaduto',
+        token: null,
+      })
       .mockResolvedValueOnce({ success: true, error: null, token: 'tok' });
 
     mockGSC.fetchSearchAnalytics.mockResolvedValue({ rows: [] });
@@ -360,24 +439,43 @@ describe('Test 9.4 - Audit Log e Tracciabilità', () => {
     const beforeRows = Array.from({ length: 14 }, (_, i) => {
       const date = new Date('2024-01-01');
       date.setDate(date.getDate() + i);
-      return { testId: 'test-123', date: date.toISOString(), clicks: 100, impressions: 1000 };
+      return {
+        testId: 'test-123',
+        date: date.toISOString(),
+        clicks: 100,
+        impressions: 1000,
+      };
     });
     const afterRows = Array.from({ length: 14 }, (_, i) => {
       const date = new Date('2024-01-15');
       date.setDate(date.getDate() + i);
-      return { testId: 'test-123', date: date.toISOString(), clicks: 100, impressions: 1000 };
+      return {
+        testId: 'test-123',
+        date: date.toISOString(),
+        clicks: 100,
+        impressions: 1000,
+      };
     });
-    db.insert(metrics).values([...beforeRows, ...afterRows]).run();
+    db.insert(metrics)
+      .values([...beforeRows, ...afterRows])
+      .run();
 
     const mockToken = createMockTokenManager();
     const mockGSC = createMockGSCFetcher();
     const mockTimeSeries = createMockTimeSeriesService();
     const mockNotification = createMockNotificationService();
 
-    mockToken.getValidAccessToken.mockResolvedValue({ success: true, error: null, token: 'tok' });
+    mockToken.getValidAccessToken.mockResolvedValue({
+      success: true,
+      error: null,
+      token: 'tok',
+    });
     mockGSC.fetchSearchAnalytics.mockResolvedValue({ rows: [] });
     mockTimeSeries.saveData.mockResolvedValue(undefined);
-    mockNotification.sendVictoryAlert.mockResolvedValue({ sent: false, reason: 'not_significant' });
+    mockNotification.sendVictoryAlert.mockResolvedValue({
+      sent: false,
+      reason: 'not_significant',
+    });
 
     orchestrator = new SEOExperimentOrchestrator({
       db: db as any,
@@ -388,12 +486,16 @@ describe('Test 9.4 - Audit Log e Tracciabilità', () => {
     });
   });
 
-  it('dovrebbe registrare ogni sincronizzazione nell\'audit log', async () => {
+  it("dovrebbe registrare ogni sincronizzazione nell'audit log", async () => {
     await orchestrator.runExperiment('test-123');
 
-    const logs = db.select().from(auditLogs).where(eq(auditLogs.testId, 'test-123')).all();
-    expect(logs.some(l => l.action === 'experiment_synced')).toBe(true);
-    expect(logs.some(l => l.userId === 'user-1')).toBe(true);
+    const logs = db
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.testId, 'test-123'))
+      .all();
+    expect(logs.some((l) => l.action === 'experiment_synced')).toBe(true);
+    expect(logs.some((l) => l.userId === 'user-1')).toBe(true);
   });
 
   it('dovrebbe aggiornare lastSyncAt dopo ogni sincronizzazione riuscita', async () => {
@@ -401,7 +503,11 @@ describe('Test 9.4 - Audit Log e Tracciabilità', () => {
 
     await orchestrator.runExperiment('test-123');
 
-    const updated = db.select().from(tests).where(eq(tests.id, 'test-123')).get();
+    const updated = db
+      .select()
+      .from(tests)
+      .where(eq(tests.id, 'test-123'))
+      .get();
     expect(updated?.lastSyncAt).toBeDefined();
     expect(updated!.lastSyncAt! >= beforeRun).toBe(true);
     expect(updated?.lastPValue).toEqual(expect.any(Number));

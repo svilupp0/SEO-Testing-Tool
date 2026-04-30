@@ -48,7 +48,9 @@ export const MOCK_ERRORS = {
  *
  * @param scenario - 'success' | 'invalid_code' | 'network_error'
  */
-export function mockExchangeCodeForTokens(scenario: 'success' | 'invalid_code' | 'network_error' = 'success') {
+export function mockExchangeCodeForTokens(
+  scenario: 'success' | 'invalid_code' | 'network_error' = 'success'
+) {
   const mockFetch = vi.spyOn(global, 'fetch');
 
   if (scenario === 'success') {
@@ -75,7 +77,9 @@ export function mockExchangeCodeForTokens(scenario: 'success' | 'invalid_code' |
  *
  * @param scenario - 'success' | 'revoked' | 'network_error'
  */
-export function mockRefreshAccessToken(scenario: 'success' | 'revoked' | 'network_error' = 'success') {
+export function mockRefreshAccessToken(
+  scenario: 'success' | 'revoked' | 'network_error' = 'success'
+) {
   const mockFetch = vi.spyOn(global, 'fetch');
 
   if (scenario === 'success') {
@@ -102,7 +106,9 @@ export function mockRefreshAccessToken(scenario: 'success' | 'revoked' | 'networ
  *
  * @param scenario - 'success' | 'unauthorized' | 'network_error'
  */
-export function mockGetUserInfo(scenario: 'success' | 'unauthorized' | 'network_error' = 'success') {
+export function mockGetUserInfo(
+  scenario: 'success' | 'unauthorized' | 'network_error' = 'success'
+) {
   const mockFetch = vi.spyOn(global, 'fetch');
 
   if (scenario === 'success') {
@@ -146,34 +152,41 @@ export function setupOAuthMocks() {
  * Utile per test complessi dove si fanno multiple chiamate
  */
 export function mockGoogleOAuthAPI() {
-  const mockFetch = vi.spyOn(global, 'fetch').mockImplementation(async (input: RequestInfo | URL) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  const mockFetch = vi
+    .spyOn(global, 'fetch')
+    .mockImplementation(async (input: RequestInfo | URL) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
 
-    // Exchange code for tokens
-    if (url.includes('oauth2.googleapis.com/token')) {
+      // Exchange code for tokens
+      if (url.includes('oauth2.googleapis.com/token')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => MOCK_TOKENS,
+        } as Response;
+      }
+
+      // Get user info
+      if (url.includes('oauth2/v2/userinfo')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => MOCK_USER_INFO,
+        } as Response;
+      }
+
+      // Fallback: chiamata non mockate
       return {
-        ok: true,
-        status: 200,
-        json: async () => MOCK_TOKENS,
+        ok: false,
+        status: 404,
+        json: async () => ({ error: 'Not Found' }),
       } as Response;
-    }
-
-    // Get user info
-    if (url.includes('oauth2/v2/userinfo')) {
-      return {
-        ok: true,
-        status: 200,
-        json: async () => MOCK_USER_INFO,
-      } as Response;
-    }
-
-    // Fallback: chiamata non mockate
-    return {
-      ok: false,
-      status: 404,
-      json: async () => ({ error: 'Not Found' }),
-    } as Response;
-  });
+    });
 
   return mockFetch;
 }

@@ -25,12 +25,15 @@ vi.mock('../../src/database/db.js', () => ({
 
 // Mock chalk (passthrough)
 vi.mock('chalk', () => ({
-  default: new Proxy({}, {
-    get: () => {
-      const fn = (s: unknown) => String(s);
-      return new Proxy(fn, { get: () => fn });
-    },
-  }),
+  default: new Proxy(
+    {},
+    {
+      get: () => {
+        const fn = (s: unknown) => String(s);
+        return new Proxy(fn, { get: () => fn });
+      },
+    }
+  ),
 }));
 
 // Mock formatters
@@ -56,8 +59,12 @@ const mockGetAuthorizationUrl = vi.fn();
 const mockExchangeCodeForTokens = vi.fn();
 vi.mock('../../src/auth/GoogleOAuthService.js', () => ({
   GoogleOAuthService: class {
-    getAuthorizationUrl(...args: unknown[]) { return mockGetAuthorizationUrl(...args); }
-    exchangeCodeForTokens(...args: unknown[]) { return mockExchangeCodeForTokens(...args); }
+    getAuthorizationUrl(...args: unknown[]) {
+      return mockGetAuthorizationUrl(...args);
+    }
+    exchangeCodeForTokens(...args: unknown[]) {
+      return mockExchangeCodeForTokens(...args);
+    }
   },
 }));
 
@@ -93,7 +100,9 @@ describe('Comando login', () => {
     delete process.env['USER_ID'];
 
     // Reset mock implementations
-    mockGetAuthorizationUrl.mockReturnValue('https://accounts.google.com/o/oauth2/v2/auth?mock=1');
+    mockGetAuthorizationUrl.mockReturnValue(
+      'https://accounts.google.com/o/oauth2/v2/auth?mock=1'
+    );
     mockExchangeCodeForTokens.mockResolvedValue({
       access_token: 'ya29.mock-access-token',
       refresh_token: '1//mock-refresh-token',
@@ -108,7 +117,9 @@ describe('Comando login', () => {
       tokenUri: 'https://oauth2.googleapis.com/token',
       scopes: ['https://www.googleapis.com/auth/webmasters.readonly'],
     });
-    mockInquirerPrompt.mockResolvedValue({ code: '4/0mock-authorization-code' });
+    mockInquirerPrompt.mockResolvedValue({
+      code: '4/0mock-authorization-code',
+    });
 
     logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
   });
@@ -117,11 +128,13 @@ describe('Comando login', () => {
     logSpy.mockRestore();
   });
 
-  it('dovrebbe generare l\'URL di autenticazione e mostrarlo', async () => {
+  it("dovrebbe generare l'URL di autenticazione e mostrarlo", async () => {
     await loginCommand();
 
-    const output = logSpy.mock.calls.map(c => c.join(' ')).join('\n');
-    expect(output).toContain('https://accounts.google.com/o/oauth2/v2/auth?mock=1');
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    expect(output).toContain(
+      'https://accounts.google.com/o/oauth2/v2/auth?mock=1'
+    );
     expect(output).toContain('Per collegare il tuo account Google');
   });
 
@@ -129,31 +142,45 @@ describe('Comando login', () => {
     await loginCommand();
 
     // Verifica che exchangeCodeForTokens sia stato chiamato con il codice
-    expect(mockExchangeCodeForTokens).toHaveBeenCalledWith('4/0mock-authorization-code');
+    expect(mockExchangeCodeForTokens).toHaveBeenCalledWith(
+      '4/0mock-authorization-code'
+    );
 
     // Verifica che il token sia stato salvato nel DB
-    const token = testDb.select().from(oauthTokens).where(eq(oauthTokens.userId, 'default-user')).get();
+    const token = testDb
+      .select()
+      .from(oauthTokens)
+      .where(eq(oauthTokens.userId, 'default-user'))
+      .get();
     expect(token).toBeDefined();
     expect(token!.accessToken).toBe('ya29.mock-access-token');
     expect(token!.refreshToken).toBe('1//mock-refresh-token');
     expect(token!.expiresAt).toBeGreaterThan(Date.now());
   });
 
-  it('dovrebbe creare l\'utente default-user se non esiste', async () => {
+  it("dovrebbe creare l'utente default-user se non esiste", async () => {
     await loginCommand();
 
-    const user = testDb.select().from(users).where(eq(users.id, 'default-user')).get();
+    const user = testDb
+      .select()
+      .from(users)
+      .where(eq(users.id, 'default-user'))
+      .get();
     expect(user).toBeDefined();
     expect(user!.email).toBe('default-user@seo-tool.local');
   });
 
-  it('dovrebbe usare USER_ID dall\'env se impostato', async () => {
+  it("dovrebbe usare USER_ID dall'env se impostato", async () => {
     process.env['USER_ID'] = 'custom-user';
     seedUser(testDb, 'custom-user', 'custom@test.com');
 
     await loginCommand();
 
-    const token = testDb.select().from(oauthTokens).where(eq(oauthTokens.userId, 'custom-user')).get();
+    const token = testDb
+      .select()
+      .from(oauthTokens)
+      .where(eq(oauthTokens.userId, 'custom-user'))
+      .get();
     expect(token).toBeDefined();
     expect(token!.accessToken).toBe('ya29.mock-access-token');
   });
@@ -161,7 +188,7 @@ describe('Comando login', () => {
   it('dovrebbe mostrare messaggio di successo dopo il login', async () => {
     await loginCommand();
 
-    const output = logSpy.mock.calls.map(c => c.join(' ')).join('\n');
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
     expect(output).toContain('Login effettuato');
     expect(output).toContain('seo-tool run');
   });
@@ -170,26 +197,33 @@ describe('Comando login', () => {
     await loginCommand();
 
     const logs = testDb.select().from(auditLogs).all();
-    const loginLog = logs.find(l => l.action === 'user_login');
+    const loginLog = logs.find((l) => l.action === 'user_login');
     expect(loginLog).toBeDefined();
     expect(loginLog!.userId).toBe('default-user');
   });
 
-  it('dovrebbe aggiornare i token se l\'utente ha già fatto login', async () => {
+  it("dovrebbe aggiornare i token se l'utente ha già fatto login", async () => {
     seedUser(testDb, 'default-user', 'default-user@seo-tool.local');
 
     // Inserisci token esistenti
-    testDb.insert(oauthTokens).values({
-      userId: 'default-user',
-      accessToken: 'old-access-token',
-      refreshToken: 'old-refresh-token',
-      expiresAt: Date.now() - 3600000, // scaduto
-    }).run();
+    testDb
+      .insert(oauthTokens)
+      .values({
+        userId: 'default-user',
+        accessToken: 'old-access-token',
+        refreshToken: 'old-refresh-token',
+        expiresAt: Date.now() - 3600000, // scaduto
+      })
+      .run();
 
     await loginCommand();
 
     // Verifica che il token sia stato aggiornato
-    const token = testDb.select().from(oauthTokens).where(eq(oauthTokens.userId, 'default-user')).get();
+    const token = testDb
+      .select()
+      .from(oauthTokens)
+      .where(eq(oauthTokens.userId, 'default-user'))
+      .get();
     expect(token!.accessToken).toBe('ya29.mock-access-token');
     expect(token!.refreshToken).toBe('1//mock-refresh-token');
     expect(token!.expiresAt).toBeGreaterThan(Date.now());
@@ -203,25 +237,25 @@ describe('Comando login', () => {
     mockGetConfig.mockImplementation(() => {
       throw new Error(
         'Google OAuth credentials not configured. ' +
-        'Please create a .env file with GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.',
+          'Please create a .env file with GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.'
       );
     });
 
     await loginCommand();
 
-    const output = logSpy.mock.calls.map(c => c.join(' ')).join('\n');
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
     expect(output).toContain('Credenziali Google non configurate');
     expect(output).toContain('.env.example');
   });
 
   it('dovrebbe gestire errore di scambio codice', async () => {
     mockExchangeCodeForTokens.mockRejectedValueOnce(
-      new Error('Impossibile connettersi a Google. Riprova.'),
+      new Error('Impossibile connettersi a Google. Riprova.')
     );
 
     await loginCommand();
 
-    const output = logSpy.mock.calls.map(c => c.join(' ')).join('\n');
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
     expect(output).toContain('Impossibile connettersi a Google');
 
     // Nessun token salvato
@@ -229,11 +263,15 @@ describe('Comando login', () => {
     expect(allTokens).toHaveLength(0);
   });
 
-  it('dovrebbe trimmare il codice incollato dall\'utente', async () => {
-    mockInquirerPrompt.mockResolvedValue({ code: '  4/0mock-code-with-spaces  ' });
+  it("dovrebbe trimmare il codice incollato dall'utente", async () => {
+    mockInquirerPrompt.mockResolvedValue({
+      code: '  4/0mock-code-with-spaces  ',
+    });
 
     await loginCommand();
 
-    expect(mockExchangeCodeForTokens).toHaveBeenCalledWith('4/0mock-code-with-spaces');
+    expect(mockExchangeCodeForTokens).toHaveBeenCalledWith(
+      '4/0mock-code-with-spaces'
+    );
   });
 });

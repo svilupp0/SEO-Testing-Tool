@@ -60,17 +60,17 @@ seo-tool export <ID>
 
 ## CLI Commands
 
-| Command | Description |
-|---------|-------------|
-| `seo-tool setup` | Interactive wizard to configure Google OAuth2 credentials |
-| `seo-tool demo` | Generate demo data (2 experiments, 70 simulated days — no Google account needed) |
-| `seo-tool login` | Connect Google account (OAuth2 for Search Console) |
-| `seo-tool add` | Create a new SEO test (interactive prompts) |
-| `seo-tool list` | Show table of all tests |
-| `seo-tool status <id>` | Test detail with statistical analysis and ASCII chart |
-| `seo-tool run` | Sync all active tests (fetch GSC + analyze) |
-| `seo-tool export <id>` | Export metrics to Excel or CSV |
-| `seo-tool delete <id>` | Delete a test (with interactive confirmation) |
+| Command                | Description                                                                      |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| `seo-tool setup`       | Interactive wizard to configure Google OAuth2 credentials                        |
+| `seo-tool demo`        | Generate demo data (2 experiments, 70 simulated days — no Google account needed) |
+| `seo-tool login`       | Connect Google account (OAuth2 for Search Console)                               |
+| `seo-tool add`         | Create a new SEO test (interactive prompts)                                      |
+| `seo-tool list`        | Show table of all tests                                                          |
+| `seo-tool status <id>` | Test detail with statistical analysis and ASCII chart                            |
+| `seo-tool run`         | Sync all active tests (fetch GSC + analyze)                                      |
+| `seo-tool export <id>` | Export metrics to Excel or CSV                                                   |
+| `seo-tool delete <id>` | Delete a test (with interactive confirmation)                                    |
 
 All commands that accept `<id>` support **partial IDs** (e.g. `seo-tool status abcd`).
 
@@ -170,6 +170,7 @@ The project includes configuration for Railway with a nightly cron job and embed
 ### Cron Job
 
 The cron job (`railway.json`) runs `npm run cli:run` every night at **03:00 UTC**:
+
 - Fetches new data from Google Search Console
 - Runs statistical analysis (Welch's t-test)
 - Sends notifications if results are statistically significant

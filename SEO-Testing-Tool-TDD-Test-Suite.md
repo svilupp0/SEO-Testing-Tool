@@ -2,19 +2,20 @@ SEO Testing Tool – Test Suite Completa
 Test-Driven Development (TDD) Specification
 Introduzione al TDD per SEO Testing
 Il TDD (Test-Driven Development) è fondamentale per un tool SEO dove la precisione dei dati è critica. La metodologia è semplice:
-•	Scrivi il test
-•	Vedi che fallisce (il codice non esiste ancora)
-•	Scrivi il codice minimo per farlo passare
-•	Migliora il codice (Refactor)
+• Scrivi il test
+• Vedi che fallisce (il codice non esiste ancora)
+• Scrivi il codice minimo per farlo passare
+• Migliora il codice (Refactor)
 Perché TDD per questo progetto? Se sbagli un calcolo statistico, il tool è inutile. I test garantiscono che ogni componente funzioni correttamente prima di essere integrato.
+
 1. Autenticazione e Accesso (La Sicurezza)
-Questi test garantiscono che solo gli utenti autorizzati possano accedere ai propri dati e che il sistema gestisca correttamente le sessioni.
-1.1 Test Login Google OAuth2
-Obiettivo: Verificare che l'utente riesca a collegarsi tramite OAuth2.
-Scenario: L'utente clicca su "Login con Google".
-Risultato atteso: L'utente viene reindirizzato a Google, autorizza l'app, e torna autenticato.
-Comportamento su fallimento: Messaggio di errore chiaro: "Impossibile connettersi a Google. Riprova."
-Priorità: CRITICA
+   Questi test garantiscono che solo gli utenti autorizzati possano accedere ai propri dati e che il sistema gestisca correttamente le sessioni.
+   1.1 Test Login Google OAuth2
+   Obiettivo: Verificare che l'utente riesca a collegarsi tramite OAuth2.
+   Scenario: L'utente clicca su "Login con Google".
+   Risultato atteso: L'utente viene reindirizzato a Google, autorizza l'app, e torna autenticato.
+   Comportamento su fallimento: Messaggio di errore chiaro: "Impossibile connettersi a Google. Riprova."
+   Priorità: CRITICA
 
 1.2 Test Scadenza Token
 Obiettivo: Verificare che il sistema usi il refresh token quando l'access token scade.
@@ -46,13 +47,13 @@ Risultato atteso: Errore chiaro: "Non hai accesso a questa proprietà su Google 
 Priorità: ALTA
 
 2. Ingestione Dati (Il "Tubo" con Google)
-Questi test verificano che il sistema raccolga i dati da Google Search Console in modo affidabile, gestendo errori e edge cases.
-2.1 Test Rate Limit
-Obiettivo: Verificare la gestione del rate limiting di Google (429 Too Many Requests).
-Scenario: Google risponde con errore 429 durante il fetch.
-Risultato atteso: Il sistema implementa exponential backoff: aspetta 1s, poi 2s, poi 4s, poi 8s prima di riprovare.
-Comportamento su fallimento: Non deve crashare o ritentare immediatamente creando loop infiniti.
-Priorità: CRITICA
+   Questi test verificano che il sistema raccolga i dati da Google Search Console in modo affidabile, gestendo errori e edge cases.
+   2.1 Test Rate Limit
+   Obiettivo: Verificare la gestione del rate limiting di Google (429 Too Many Requests).
+   Scenario: Google risponde con errore 429 durante il fetch.
+   Risultato atteso: Il sistema implementa exponential backoff: aspetta 1s, poi 2s, poi 4s, poi 8s prima di riprovare.
+   Comportamento su fallimento: Non deve crashare o ritentare immediatamente creando loop infiniti.
+   Priorità: CRITICA
 
 2.2 Test Dati Mancanti
 Obiettivo: Verificare la gestione del ritardo di 2–3 giorni tipico di GSC.
@@ -76,13 +77,13 @@ Comportamento su fallimento: Timeout o crash del server durante il fetch.
 Priorità: ALTA
 
 3. Motore Statistico (Il Cervello)
-Questi sono i test più critici. Un errore qui rende il tool completamente inutile.
-3.1 Test Ipotesi Nulla
-Obiettivo: Verificare che il sistema riconosca correttamente quando non c'è stato alcun cambiamento.
-Scenario: Dati identici per "Prima" e "Dopo" (100 click/giorno in entrambi i periodi).
-Risultato atteso: p-value alto (>0.05), messaggio: "Nessun cambiamento significativo rilevato."
-Comportamento su fallimento: Dichiarare un cambiamento quando non c'è stato è falso positivo.
-Priorità: CRITICA
+   Questi sono i test più critici. Un errore qui rende il tool completamente inutile.
+   3.1 Test Ipotesi Nulla
+   Obiettivo: Verificare che il sistema riconosca correttamente quando non c'è stato alcun cambiamento.
+   Scenario: Dati identici per "Prima" e "Dopo" (100 click/giorno in entrambi i periodi).
+   Risultato atteso: p-value alto (>0.05), messaggio: "Nessun cambiamento significativo rilevato."
+   Comportamento su fallimento: Dichiarare un cambiamento quando non c'è stato è falso positivo.
+   Priorità: CRITICA
 
 3.2 Test Significatività
 Obiettivo: Verificare che il sistema non dichiari successo con dati insufficienti.
@@ -113,13 +114,13 @@ Comportamento su fallimento: Dichiarare il test negativo quando ha in realtà mi
 Priorità: MEDIA (Feature avanzata, non MVP)
 
 4. Gestione degli Esperimenti (Il Workflow)
-Questi test verificano che il sistema gestisca correttamente la creazione, modifica e cancellazione dei test.
-4.1 Test Sovrapposizione
-Obiettivo: Verificare che non si possano lanciare test simultanei sulla stessa pagina.
-Scenario: L'utente tenta di creare un secondo test su una pagina già in test attivo.
-Risultato atteso: Errore: "Questa pagina è già inclusa nel test 'Nome Test'. Completa o cancella quel test prima di crearne uno nuovo."
-Comportamento su fallimento: Test sovrapposti rendono impossibile attribuire i cambiamenti alla modifica corretta.
-Priorità: ALTA
+   Questi test verificano che il sistema gestisca correttamente la creazione, modifica e cancellazione dei test.
+   4.1 Test Sovrapposizione
+   Obiettivo: Verificare che non si possano lanciare test simultanei sulla stessa pagina.
+   Scenario: L'utente tenta di creare un secondo test su una pagina già in test attivo.
+   Risultato atteso: Errore: "Questa pagina è già inclusa nel test 'Nome Test'. Completa o cancella quel test prima di crearne uno nuovo."
+   Comportamento su fallimento: Test sovrapposti rendono impossibile attribuire i cambiamenti alla modifica corretta.
+   Priorità: ALTA
 
 4.2 Test Modifica in Corso
 Obiettivo: Verificare la gestione della modifica della data di inizio su test attivo.
@@ -137,13 +138,13 @@ Decisione necessaria: Definire la politica in base ai requisiti legali e UX.
 Priorità: MEDIA
 
 5. Database e Performance (La Tenuta)
-Questi test verificano che il sistema regga sotto carico e che i dati rimangano consistenti.
-5.1 Test Concorrenza
-Obiettivo: Verificare la gestione di richieste simultanee.
-Scenario: 100 utenti lanciano un report nello stesso secondo.
-Risultato atteso: Nessun deadlock database, tutte le richieste vengono elaborate (possibilmente in coda).
-Comportamento su fallimento: Database lock, timeout, o crash del server.
-Priorità: ALTA
+   Questi test verificano che il sistema regga sotto carico e che i dati rimangano consistenti.
+   5.1 Test Concorrenza
+   Obiettivo: Verificare la gestione di richieste simultanee.
+   Scenario: 100 utenti lanciano un report nello stesso secondo.
+   Risultato atteso: Nessun deadlock database, tutte le richieste vengono elaborate (possibilmente in coda).
+   Comportamento su fallimento: Database lock, timeout, o crash del server.
+   Priorità: ALTA
 
 5.2 Test Integrità Serie Temporale
 Obiettivo: Verificare il recupero di dati mancanti dopo un fetch fallito.
@@ -160,13 +161,13 @@ Comportamento su fallimento: Query lente (>10s) rendono il tool inutilizzabile.
 Priorità: MEDIA (Ottimizzazione post-MVP)
 
 6. Notifiche e Automazione (Il Valore)
-Questi test verificano che le notifiche siano tempestive, accurate e non fastidiose.
-6.1 Test Alert Vittoria
-Obiettivo: Verificare che le notifiche vengano inviate solo quando statisticamente significative.
-Scenario: Un test raggiunge p-value <0.05 con miglioramento del +20%.
-Risultato atteso: Email: "Il tuo test 'Titolo Ottimizzato' mostra un miglioramento significativo! +20% click con 95% confidenza."
-Comportamento su fallimento: Inviare notifiche per ogni minima variazione crea alert fatigue e riduce la fiducia.
-Priorità: ALTA
+   Questi test verificano che le notifiche siano tempestive, accurate e non fastidiose.
+   6.1 Test Alert Vittoria
+   Obiettivo: Verificare che le notifiche vengano inviate solo quando statisticamente significative.
+   Scenario: Un test raggiunge p-value <0.05 con miglioramento del +20%.
+   Risultato atteso: Email: "Il tuo test 'Titolo Ottimizzato' mostra un miglioramento significativo! +20% click con 95% confidenza."
+   Comportamento su fallimento: Inviare notifiche per ogni minima variazione crea alert fatigue e riduce la fiducia.
+   Priorità: ALTA
 
 6.2 Test Report Settimanale
 Obiettivo: Verificare il formato del digest per utenti con test multipli.
@@ -176,13 +177,13 @@ Comportamento su fallimento: 10 email separate creano spam e l'utente disattiva 
 Priorità: MEDIA (Feature post-MVP)
 
 7. Casi Estremi (I "Cattivi")
-Questi sono gli edge cases che fanno crashare i tool mal progettati.
-7.1 Test URL Redirect
-Obiettivo: Verificare la gestione di pagine che vengono reindirizzate durante il test.
-Scenario: La pagina /vecchio-url riceve redirect 301 a /nuovo-url durante il test.
-Risultato atteso: Il sistema rileva il redirect e chiede: "URL reindirizzato. Vuoi continuare il test sul nuovo URL?"
-Comportamento su fallimento: Continuare a tracciare l'URL vecchio (che ora ha traffico zero) invalida il test.
-Priorità: ALTA
+   Questi sono gli edge cases che fanno crashare i tool mal progettati.
+   7.1 Test URL Redirect
+   Obiettivo: Verificare la gestione di pagine che vengono reindirizzate durante il test.
+   Scenario: La pagina /vecchio-url riceve redirect 301 a /nuovo-url durante il test.
+   Risultato atteso: Il sistema rileva il redirect e chiede: "URL reindirizzato. Vuoi continuare il test sul nuovo URL?"
+   Comportamento su fallimento: Continuare a tracciare l'URL vecchio (che ora ha traffico zero) invalida il test.
+   Priorità: ALTA
 
 7.2 Test Cambio Dominio
 Obiettivo: Verificare la gestione del cambio da HTTP a HTTPS (proprietà diverse in GSC).
@@ -199,13 +200,13 @@ Comportamento su fallimento: Dichiarare tutti i test "peggiorati" quando in real
 Priorità: MEDIA
 
 8. UI/UX (L'Esperienza)
-Questi test verificano che l'interfaccia sia usabile, veloce e accessibile.
-8.1 Test Caricamento Infinito
-Obiettivo: Verificare che l'utente riceva feedback durante operazioni lunghe.
-Scenario: Il fetch dei dati da GSC impiega 30 secondi.
-Risultato atteso: Barra di progresso con percentuale o spinner con messaggio: "Recupero dati da Google Search Console... 45%"
-Comportamento su fallimento: Pagina bianca senza feedback fa pensare che il sistema sia crashato.
-Priorità: ALTA
+   Questi test verificano che l'interfaccia sia usabile, veloce e accessibile.
+   8.1 Test Caricamento Infinito
+   Obiettivo: Verificare che l'utente riceva feedback durante operazioni lunghe.
+   Scenario: Il fetch dei dati da GSC impiega 30 secondi.
+   Risultato atteso: Barra di progresso con percentuale o spinner con messaggio: "Recupero dati da Google Search Console... 45%"
+   Comportamento su fallimento: Pagina bianca senza feedback fa pensare che il sistema sia crashato.
+   Priorità: ALTA
 
 8.2 Test Mobile
 Obiettivo: Verificare l'usabilità su smartphone.
@@ -223,42 +224,42 @@ Priorità: CRITICA
 
 Matrice Priorità Test
 Questa tabella riassume i test per priorità di implementazione.
-Priorità	Test	Categoria
-CRITICA	Login Google OAuth2	Autenticazione
-CRITICA	Scadenza Token	Autenticazione
-CRITICA	Multi-tenancy	Autenticazione
-CRITICA	Rate Limit	Ingestione Dati
-CRITICA	Dati Mancanti	Ingestione Dati
-CRITICA	Ipotesi Nulla	Statistica
-CRITICA	Significatività	Statistica
-CRITICA	Esportazione	UI/UX
-ALTA	Revoca Accesso	Autenticazione
-ALTA	Permessi GSC	Autenticazione
-ALTA	Discrepanza Fuso Orario	Ingestione Dati
-ALTA	Proprietà Giganti	Ingestione Dati
-ALTA	Outlier	Statistica
-ALTA	Stagionalità	Statistica
-ALTA	Sovrapposizione	Workflow
-ALTA	Concorrenza	Performance
-ALTA	Integrità Serie Temporale	Performance
-ALTA	Alert Vittoria	Notifiche
-ALTA	URL Redirect	Edge Cases
-ALTA	Caricamento Infinito	UI/UX
-ALTA	Mobile	UI/UX
-MEDIA	Gruppo di Controllo	Statistica
-MEDIA	Modifica in Corso	Workflow
-MEDIA	Cancellazione	Workflow
-MEDIA	Storage	Performance
-MEDIA	Report Settimanale	Notifiche
-MEDIA	Cambio Dominio	Edge Cases
-MEDIA	Sito Morto	Edge Cases
+Priorità Test Categoria
+CRITICA Login Google OAuth2 Autenticazione
+CRITICA Scadenza Token Autenticazione
+CRITICA Multi-tenancy Autenticazione
+CRITICA Rate Limit Ingestione Dati
+CRITICA Dati Mancanti Ingestione Dati
+CRITICA Ipotesi Nulla Statistica
+CRITICA Significatività Statistica
+CRITICA Esportazione UI/UX
+ALTA Revoca Accesso Autenticazione
+ALTA Permessi GSC Autenticazione
+ALTA Discrepanza Fuso Orario Ingestione Dati
+ALTA Proprietà Giganti Ingestione Dati
+ALTA Outlier Statistica
+ALTA Stagionalità Statistica
+ALTA Sovrapposizione Workflow
+ALTA Concorrenza Performance
+ALTA Integrità Serie Temporale Performance
+ALTA Alert Vittoria Notifiche
+ALTA URL Redirect Edge Cases
+ALTA Caricamento Infinito UI/UX
+ALTA Mobile UI/UX
+MEDIA Gruppo di Controllo Statistica
+MEDIA Modifica in Corso Workflow
+MEDIA Cancellazione Workflow
+MEDIA Storage Performance
+MEDIA Report Settimanale Notifiche
+MEDIA Cambio Dominio Edge Cases
+MEDIA Sito Morto Edge Cases
 
 Conclusione
 Il TDD non è opzionale per un SEO Testing Tool. Ogni test in questo documento protegge il sistema da un fallimento specifico che potrebbe rendere il tool inutile o, peggio, dannoso (dando raccomandazioni sbagliate).
 Approccio consigliato:
-•	Inizia dai test CRITICI (rossi)
-•	Aggiungi test ALTI (arancioni) durante lo sviluppo MVP
-•	Rimanda test MEDI (gialli) post-lancio
+• Inizia dai test CRITICI (rossi)
+• Aggiungi test ALTI (arancioni) durante lo sviluppo MVP
+• Rimanda test MEDI (gialli) post-lancio
 Ogni test superato è una garanzia in più per gli utenti che il tool funziona davvero.
 —
 Versione 1.0 – TDD Test Suite Specification

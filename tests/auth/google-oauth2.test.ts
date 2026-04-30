@@ -1,16 +1,16 @@
 /**
  * Test 1.1 - Login Google OAuth2
- * 
+ *
  * Priorità: CRITICA
- * 
+ *
  * Obiettivo: Verificare che l'utente riesca a collegarsi tramite OAuth2
- * 
+ *
  * Scenario: L'utente clicca su "Login con Google"
- * 
- * Risultato atteso: L'utente viene reindirizzato a Google, autorizza l'app, 
+ *
+ * Risultato atteso: L'utente viene reindirizzato a Google, autorizza l'app,
  * e torna autenticato
- * 
- * Comportamento su fallimento: Messaggio di errore chiaro: 
+ *
+ * Comportamento su fallimento: Messaggio di errore chiaro:
  * "Impossibile connettersi a Google. Riprova."
  */
 
@@ -80,7 +80,7 @@ describe('Test 1.1 - Login Google OAuth2', () => {
     expect(typeof tokens.refresh_token).toBe('string');
   });
 
-  it('dovrebbe recuperare le informazioni dell\'utente autenticato', async () => {
+  it("dovrebbe recuperare le informazioni dell'utente autenticato", async () => {
     // Arrange: Simuliamo un utente autenticato con un access_token
     const accessToken = 'valid-access-token';
 
@@ -109,14 +109,12 @@ describe('Test 1.1 - Login Google OAuth2', () => {
     ).rejects.toThrow('Impossibile connettersi a Google. Riprova.');
   });
 
-  it('dovrebbe gestire errori di rete durante l\'autenticazione', async () => {
+  it("dovrebbe gestire errori di rete durante l'autenticazione", async () => {
     // Arrange: Simuliamo un errore di rete
     const authorizationCode = 'test-code';
-    
+
     // Mock della chiamata di rete che fallisce
-    vi.spyOn(global, 'fetch').mockRejectedValueOnce(
-      new Error('Network error')
-    );
+    vi.spyOn(global, 'fetch').mockRejectedValueOnce(new Error('Network error'));
 
     // Act & Assert: Verifichiamo che l'errore venga gestito correttamente
     await expect(

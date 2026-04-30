@@ -15,7 +15,9 @@ config();
 import { SEOExperimentOrchestrator } from './orchestrator/SEOExperimentOrchestrator.js';
 
 async function main(): Promise<void> {
-  console.log(`[${new Date().toISOString()}] Avvio sincronizzazione test attivi...`);
+  console.log(
+    `[${new Date().toISOString()}] Avvio sincronizzazione test attivi...`
+  );
 
   const orchestrator = new SEOExperimentOrchestrator();
 
@@ -29,7 +31,9 @@ async function main(): Promise<void> {
 
     for (const r of result.results) {
       const status = r.isSignificant ? 'SIGNIFICATIVO' : 'in corso';
-      console.log(`  [${r.testId}] ${status} - p=${r.pValue?.toFixed(4)} (${r.dataPointsBefore}+${r.dataPointsAfter} punti)`);
+      console.log(
+        `  [${r.testId}] ${status} - p=${r.pValue?.toFixed(4)} (${r.dataPointsBefore}+${r.dataPointsAfter} punti)`
+      );
     }
 
     if (result.errors.length > 0) {
@@ -39,7 +43,9 @@ async function main(): Promise<void> {
       }
     }
 
-    process.exit(result.errorCount === result.totalTests && result.totalTests > 0 ? 1 : 0);
+    process.exit(
+      result.errorCount === result.totalTests && result.totalTests > 0 ? 1 : 0
+    );
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Errore fatale:`, error);
     process.exit(1);

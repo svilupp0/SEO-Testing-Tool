@@ -255,7 +255,9 @@ describe('ReportExportService', () => {
       // Mean before ≈ 116.0
       expect(values).toContain('Variazione assoluta');
       // Should contain a number for mean clicks
-      const meanBeforeValue = values.find(v => v === 'Media clicks/giorno (Before)');
+      const meanBeforeValue = values.find(
+        (v) => v === 'Media clicks/giorno (Before)'
+      );
       expect(meanBeforeValue).toBeDefined();
     });
 
@@ -287,7 +289,9 @@ describe('ReportExportService', () => {
       expect(values).toContain('Periodo Before');
       expect(values).toContain('Periodo After');
       // Should contain "giorni" in period description
-      const periodValue = values.find(v => typeof v === 'string' && v.includes('giorni (dal'));
+      const periodValue = values.find(
+        (v) => typeof v === 'string' && v.includes('giorni (dal')
+      );
       expect(periodValue).toBeDefined();
     });
 
@@ -383,7 +387,9 @@ describe('ReportExportService', () => {
       const ws = workbook.getWorksheet('Riepilogo')!;
       const values = getAllCellValues(ws);
 
-      expect(values).toContain('Variazione positiva statisticamente significativa');
+      expect(values).toContain(
+        'Variazione positiva statisticamente significativa'
+      );
       expect(values).toContain('α = 0.05');
     });
 
@@ -399,7 +405,9 @@ describe('ReportExportService', () => {
       const ws = workbook.getWorksheet('Riepilogo')!;
       const values = getAllCellValues(ws);
 
-      expect(values).toContain('Variazione negativa statisticamente significativa — valutare rollback');
+      expect(values).toContain(
+        'Variazione negativa statisticamente significativa — valutare rollback'
+      );
     });
 
     it('mostra interpretazione risultato non conclusivo', async () => {
@@ -414,7 +422,9 @@ describe('ReportExportService', () => {
       const ws = workbook.getWorksheet('Riepilogo')!;
       const values = getAllCellValues(ws);
 
-      expect(values).toContain('Risultato non conclusivo — considerare estensione del test');
+      expect(values).toContain(
+        'Risultato non conclusivo — considerare estensione del test'
+      );
     });
 
     it('mostra interpretazione quando analisi non disponibile', async () => {
@@ -472,8 +482,18 @@ describe('ReportExportService', () => {
     it('colonna Periodo mostra Before/After', async () => {
       // splitDate = 2025-06-15
       const metrics: MetricRow[] = [
-        { date: '2025-06-14', clicks: 100, impressions: 1000, gapFilled: false },
-        { date: '2025-06-15', clicks: 110, impressions: 1100, gapFilled: false },
+        {
+          date: '2025-06-14',
+          clicks: 100,
+          impressions: 1000,
+          gapFilled: false,
+        },
+        {
+          date: '2025-06-15',
+          clicks: 110,
+          impressions: 1100,
+          gapFilled: false,
+        },
       ];
       const input = createInput({ metrics });
       const result = await service.exportToExcel(input);
@@ -489,7 +509,12 @@ describe('ReportExportService', () => {
 
     it('riga totali presente in fondo con somme corrette', async () => {
       const metrics: MetricRow[] = [
-        { date: '2025-06-01', clicks: 100, impressions: 1000, gapFilled: false },
+        {
+          date: '2025-06-01',
+          clicks: 100,
+          impressions: 1000,
+          gapFilled: false,
+        },
         { date: '2025-06-02', clicks: 200, impressions: 2000, gapFilled: true },
       ];
       const input = createInput({ metrics });
@@ -503,7 +528,7 @@ describe('ReportExportService', () => {
       const totalsRow = ws.getRow(4);
 
       expect(totalsRow.getCell(1).value).toBe('TOTALE');
-      expect(totalsRow.getCell(2).value).toBe(300);  // 100 + 200
+      expect(totalsRow.getCell(2).value).toBe(300); // 100 + 200
       expect(totalsRow.getCell(3).value).toBe(3000); // 1000 + 2000
       expect(totalsRow.getCell(6).value).toBe('1/2'); // 1 gap-filled out of 2
     });
@@ -521,13 +546,15 @@ describe('ReportExportService', () => {
       expect(result.rowCount).toBe(30);
     });
 
-    it('la prima riga è l\'header con CTR e Periodo', async () => {
+    it("la prima riga è l'header con CTR e Periodo", async () => {
       const input = createInput();
       const result = await service.exportToCSV(input);
       const csv = result.buffer.toString('utf-8');
       const lines = csv.trim().split('\n');
 
-      expect(lines[0]).toBe('Data,Clicks,Impressions,CTR (%),Periodo,Gap Filled');
+      expect(lines[0]).toBe(
+        'Data,Clicks,Impressions,CTR (%),Periodo,Gap Filled'
+      );
     });
 
     it('le righe dati hanno il formato corretto con CTR e Periodo', async () => {
@@ -547,7 +574,12 @@ describe('ReportExportService', () => {
     it('gap_filled viene tradotto correttamente', async () => {
       const input = createInput({
         metrics: [
-          { date: '2025-06-01', clicks: 10, impressions: 100, gapFilled: false },
+          {
+            date: '2025-06-01',
+            clicks: 10,
+            impressions: 100,
+            gapFilled: false,
+          },
           { date: '2025-06-02', clicks: 20, impressions: 200, gapFilled: true },
         ],
       });
@@ -566,14 +598,26 @@ describe('ReportExportService', () => {
       const lines = csv.trim().split('\n');
 
       expect(lines.length).toBe(1);
-      expect(lines[0]).toBe('Data,Clicks,Impressions,CTR (%),Periodo,Gap Filled');
+      expect(lines[0]).toBe(
+        'Data,Clicks,Impressions,CTR (%),Periodo,Gap Filled'
+      );
     });
 
     it('CSV mostra Periodo Before/After correttamente', async () => {
       const input = createInput({
         metrics: [
-          { date: '2025-06-14', clicks: 10, impressions: 100, gapFilled: false },
-          { date: '2025-06-15', clicks: 20, impressions: 200, gapFilled: false },
+          {
+            date: '2025-06-14',
+            clicks: 10,
+            impressions: 100,
+            gapFilled: false,
+          },
+          {
+            date: '2025-06-15',
+            clicks: 20,
+            impressions: 200,
+            gapFilled: false,
+          },
         ],
       });
       const result = await service.exportToCSV(input);
@@ -594,7 +638,10 @@ describe('ReportExportService', () => {
     });
 
     it('sanitizza caratteri speciali nel nome', () => {
-      const fileName = service.buildFileName('Test/con:caratteri*speciali', 'csv');
+      const fileName = service.buildFileName(
+        'Test/con:caratteri*speciali',
+        'csv'
+      );
       expect(fileName).not.toMatch(/[\/\*:]/);
       expect(fileName).toMatch(/\.csv$/);
     });

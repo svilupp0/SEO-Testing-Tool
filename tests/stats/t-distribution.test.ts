@@ -1,4 +1,9 @@
-import { lnGamma, regularizedIncompleteBeta, studentTCDF, twoTailedPValue } from '../../src/stats/TDistribution';
+import {
+  lnGamma,
+  regularizedIncompleteBeta,
+  studentTCDF,
+  twoTailedPValue,
+} from '../../src/stats/TDistribution';
 
 describe('TDistribution - Primitive Matematiche', () => {
   describe('lnGamma', () => {
@@ -106,7 +111,10 @@ describe('TDistribution - Primitive Matematiche', () => {
     });
 
     test('dovrebbe essere simmetrico: p(-t) = p(t)', () => {
-      expect(twoTailedPValue(-2.5, 20)).toBeCloseTo(twoTailedPValue(2.5, 20), 10);
+      expect(twoTailedPValue(-2.5, 20)).toBeCloseTo(
+        twoTailedPValue(2.5, 20),
+        10
+      );
     });
 
     test('dovrebbe gestire t=Infinity restituendo 0', () => {

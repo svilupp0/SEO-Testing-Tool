@@ -60,9 +60,13 @@ export class SEOExperimentOrchestrator {
     this.db = deps?.db ?? defaultDb;
     this.gscFetcher = deps?.gscFetcher ?? new GSCDataFetcher();
     this.statisticalEngine = deps?.statisticalEngine ?? new StatisticalEngine();
-    this.timeSeriesService = deps?.timeSeriesService ?? new TimeSeriesService(deps?.db);
-    this.notificationService = deps?.notificationService ?? new NotificationService();
-    this.tokenManager = deps?.tokenManager ?? new TokenManager({ clientId: '', clientSecret: '' });
+    this.timeSeriesService =
+      deps?.timeSeriesService ?? new TimeSeriesService(deps?.db);
+    this.notificationService =
+      deps?.notificationService ?? new NotificationService();
+    this.tokenManager =
+      deps?.tokenManager ??
+      new TokenManager({ clientId: '', clientSecret: '' });
   }
 
   /**
@@ -70,18 +74,16 @@ export class SEOExperimentOrchestrator {
    */
   async runExperiment(testId: string): Promise<ExperimentResult> {
     // 1. Carica test dal database
-    const test = this.db
-      .select()
-      .from(tests)
-      .where(eq(tests.id, testId))
-      .get();
+    const test = this.db.select().from(tests).where(eq(tests.id, testId)).get();
 
     if (!test) {
       throw new Error(`Test ${testId} non trovato.`);
     }
 
     if (test.status !== 'running') {
-      throw new Error(`Test ${testId} non è in esecuzione (stato: ${test.status}).`);
+      throw new Error(
+        `Test ${testId} non è in esecuzione (stato: ${test.status}).`
+      );
     }
 
     // Carica user per email notifica
@@ -92,10 +94,14 @@ export class SEOExperimentOrchestrator {
       .get();
 
     // 2. Ottieni access token
-    const tokenResult = await this.tokenManager.getValidAccessToken(test.userId);
+    const tokenResult = await this.tokenManager.getValidAccessToken(
+      test.userId
+    );
     if (!tokenResult.success || !tokenResult.token) {
       await this.updateTestStatus(testId, 'failed', test.userId);
-      throw new Error(`Token non valido per utente ${test.userId}: ${tokenResult.error}`);
+      throw new Error(
+        `Token non valido per utente ${test.userId}: ${tokenResult.error}`
+      );
     }
 
     // 3. Fetch nuovi dati da GSC
@@ -105,7 +111,7 @@ export class SEOExperimentOrchestrator {
     const gscData = await this.gscFetcher.fetchSearchAnalytics(
       tokenResult.token,
       test.siteUrl,
-      { startDate: startDateStr, endDate: today },
+      { startDate: startDateStr, endDate: today }
     );
 
     // 4. Salva nuovi dati nel database
@@ -180,7 +186,8 @@ export class SEOExperimentOrchestrator {
         userEmail: user.email,
       };
 
-      const sendResult = await this.notificationService.sendVictoryAlert(testResult);
+      const sendResult =
+        await this.notificationService.sendVictoryAlert(testResult);
       notificationSent = sendResult.sent;
     }
 
@@ -221,7 +228,8 @@ export class SEOExperimentOrchestrator {
         const result = await this.runExperiment(test.id);
         results.push(result);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Errore sconosciuto';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Errore sconosciuto';
         errors.push({ testId: test.id, error: errorMessage });
       }
     }
@@ -238,7 +246,11 @@ export class SEOExperimentOrchestrator {
   /**
    * Aggiorna lo stato di un test e registra nel log.
    */
-  private async updateTestStatus(testId: string, status: string, userId: string): Promise<void> {
+  private async updateTestStatus(
+    testId: string,
+    status: string,
+    userId: string
+  ): Promise<void> {
     this.db
       .update(tests)
       .set({ status, updatedAt: new Date().toISOString() })

@@ -84,14 +84,21 @@ export function createTestDb(): TestDB {
 /**
  * Inserisce un utente di test nel DB.
  */
-export function seedUser(db: TestDB, id = 'user-1', email = 'test@example.com') {
+export function seedUser(
+  db: TestDB,
+  id = 'user-1',
+  email = 'test@example.com'
+) {
   db.insert(schema.users).values({ id, email }).run();
 }
 
 /**
  * Inserisce un test SEO nel DB. Richiede un utente esistente.
  */
-export function seedTest(db: TestDB, overrides: Partial<typeof schema.tests.$inferInsert> = {}) {
+export function seedTest(
+  db: TestDB,
+  overrides: Partial<typeof schema.tests.$inferInsert> = {}
+) {
   const defaults = {
     id: 'test-123',
     name: 'Test SEO Homepage',
@@ -115,7 +122,7 @@ export function seedMetrics(
   testId: string,
   startDate: string,
   days: number,
-  baseClicks: number,
+  baseClicks: number
 ) {
   const rows = Array.from({ length: days }, (_, i) => {
     const date = new Date(startDate);

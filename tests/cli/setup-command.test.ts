@@ -24,7 +24,10 @@ vi.mock('fs/promises', () => ({
 
 // --- Mock readline/promises (importato a livello di modulo in commands.ts) ---
 vi.mock('readline/promises', () => ({
-  createInterface: () => ({ question: vi.fn().mockResolvedValue(''), close: vi.fn() }),
+  createInterface: () => ({
+    question: vi.fn().mockResolvedValue(''),
+    close: vi.fn(),
+  }),
 }));
 
 // --- Mock db ---
@@ -37,12 +40,15 @@ vi.mock('../../src/database/db.js', () => ({
 
 // --- Mock chalk (passthrough) ---
 vi.mock('chalk', () => ({
-  default: new Proxy({}, {
-    get: () => {
-      const fn = (s: unknown) => String(s);
-      return new Proxy(fn, { get: () => fn });
-    },
-  }),
+  default: new Proxy(
+    {},
+    {
+      get: () => {
+        const fn = (s: unknown) => String(s);
+        return new Proxy(fn, { get: () => fn });
+      },
+    }
+  ),
 }));
 
 // --- Mock formatters ---
@@ -72,8 +78,12 @@ vi.mock('inquirer', () => ({
 // --- Mock moduli non usati da setupCommand ---
 vi.mock('../../src/auth/GoogleOAuthService.js', () => ({
   GoogleOAuthService: class {
-    getAuthorizationUrl() { return ''; }
-    exchangeCodeForTokens() { return {}; }
+    getAuthorizationUrl() {
+      return '';
+    }
+    exchangeCodeForTokens() {
+      return {};
+    }
   },
 }));
 vi.mock('../../src/config/env.js', () => ({
@@ -102,7 +112,9 @@ describe('Comando setup', () => {
     delete process.env['GOOGLE_REDIRECT_URI'];
 
     // .env non esiste per default
-    mockReadFile.mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+    mockReadFile.mockRejectedValue(
+      Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+    );
 
     // Risposte di default per il wizard (credenziali nuove)
     mockInquirerPrompt.mockResolvedValue({
@@ -128,13 +140,15 @@ describe('Comando setup', () => {
     const content: string = mockWriteFile.mock.calls[0][1];
     expect(content).toContain('GOOGLE_CLIENT_ID=my-client-id');
     expect(content).toContain('GOOGLE_CLIENT_SECRET=my-client-secret');
-    expect(content).toContain('GOOGLE_REDIRECT_URI=http://localhost:3000/auth/callback');
+    expect(content).toContain(
+      'GOOGLE_REDIRECT_URI=http://localhost:3000/auth/callback'
+    );
   });
 
   it('dovrebbe mostrare il link a Google Cloud Console', async () => {
     await setupCommand();
 
-    const output = logSpy.mock.calls.map(c => c.join(' ')).join('\n');
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
     expect(output).toContain('console.cloud.google.com');
   });
 
@@ -148,7 +162,9 @@ describe('Comando setup', () => {
     await setupCommand();
 
     const content: string = mockWriteFile.mock.calls[0][1];
-    expect(content).toContain('GOOGLE_REDIRECT_URI=http://localhost:3000/auth/callback');
+    expect(content).toContain(
+      'GOOGLE_REDIRECT_URI=http://localhost:3000/auth/callback'
+    );
   });
 
   it('dovrebbe preservare le variabili non-Google in .env esistente', async () => {
@@ -163,7 +179,9 @@ describe('Comando setup', () => {
   });
 
   it('dovrebbe aggiornare GOOGLE_CLIENT_ID già presente nel .env senza duplicarlo', async () => {
-    mockReadFile.mockResolvedValue('GOOGLE_CLIENT_ID=old-id\nDATABASE_URL=sqlite.db');
+    mockReadFile.mockResolvedValue(
+      'GOOGLE_CLIENT_ID=old-id\nDATABASE_URL=sqlite.db'
+    );
 
     await setupCommand();
 
@@ -183,7 +201,7 @@ describe('Comando setup', () => {
     await setupCommand();
 
     expect(mockWriteFile).not.toHaveBeenCalled();
-    const output = logSpy.mock.calls.map(c => c.join(' ')).join('\n');
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
     expect(output).toContain('annullata');
   });
 
@@ -208,7 +226,7 @@ describe('Comando setup', () => {
   it('dovrebbe mostrare "seo-tool login" come prossimo step', async () => {
     await setupCommand();
 
-    const output = logSpy.mock.calls.map(c => c.join(' ')).join('\n');
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
     expect(output).toContain('seo-tool login');
   });
 });

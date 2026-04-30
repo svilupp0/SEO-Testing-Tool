@@ -24,7 +24,7 @@ const CLI = join(ROOT, 'dist', 'cli.js');
 const NODE = process.execPath;
 const CLI_EXISTS = existsSync(CLI);
 const PKG_VERSION: string = JSON.parse(
-  readFileSync(join(ROOT, 'package.json'), 'utf-8'),
+  readFileSync(join(ROOT, 'package.json'), 'utf-8')
 ).version;
 
 interface CliResult {
@@ -39,7 +39,7 @@ interface CliResult {
  */
 async function runCli(
   args: string[],
-  env?: Record<string, string>,
+  env?: Record<string, string>
 ): Promise<CliResult> {
   const tmpDir = mkdtempSync(join(tmpdir(), 'seo-e2e-'));
   const dbPath = join(tmpDir, 'test.db');
@@ -93,7 +93,15 @@ describe.skipIf(!CLI_EXISTS)('CLI E2E', () => {
     const result = await runCli(['--help']);
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('seo-tool');
-    for (const cmd of ['login', 'add', 'list', 'status', 'run', 'export', 'delete']) {
+    for (const cmd of [
+      'login',
+      'add',
+      'list',
+      'status',
+      'run',
+      'export',
+      'delete',
+    ]) {
       expect(result.stdout).toContain(cmd);
     }
   });
@@ -133,73 +141,69 @@ describe.skipIf(!CLI_EXISTS)('CLI E2E', () => {
 // ---------------------------------------------------------------------------
 
 describe.skipIf(!CLI_EXISTS)('Tarball install', () => {
-  it(
-    'npm pack → install in dir temporanea → --version funziona',
-    async () => {
-      // 1. Crea tarball (npm pack stdout include output di prepack — il .tgz e' l'ultima riga)
-      const packOutput = execSync('npm pack', {
-        cwd: ROOT,
-        encoding: 'utf-8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-      }).trim();
-      const tgzName = packOutput.split(/\r?\n/).pop()!.trim();
-      const tgzPath = join(ROOT, tgzName);
-      const tmpDir = mkdtempSync(join(tmpdir(), 'seo-tarball-'));
+  it('npm pack → install in dir temporanea → --version funziona', async () => {
+    // 1. Crea tarball (npm pack stdout include output di prepack — il .tgz e' l'ultima riga)
+    const packOutput = execSync('npm pack', {
+      cwd: ROOT,
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+    const tgzName = packOutput.split(/\r?\n/).pop()!.trim();
+    const tgzPath = join(ROOT, tgzName);
+    const tmpDir = mkdtempSync(join(tmpdir(), 'seo-tarball-'));
 
-      try {
-        // 2. Inizializza progetto temporaneo e installa il tarball
-        execSync('npm init -y', { cwd: tmpDir, stdio: 'pipe' });
-        execSync(`npm install "${tgzPath}"`, {
+    try {
+      // 2. Inizializza progetto temporaneo e installa il tarball
+      execSync('npm init -y', { cwd: tmpDir, stdio: 'pipe' });
+      execSync(`npm install "${tgzPath}"`, {
+        cwd: tmpDir,
+        stdio: 'pipe',
+        timeout: 120_000,
+      });
+
+      // 3. Verifica che dist/cli.js esista nel pacchetto installato
+      const installedCli = join(
+        tmpDir,
+        'node_modules',
+        'seo-testing-tool',
+        'dist',
+        'cli.js'
+      );
+      expect(existsSync(installedCli)).toBe(true);
+
+      // 4. Verifica che drizzle/ (migrazioni) sia incluso
+      const installedDrizzle = join(
+        tmpDir,
+        'node_modules',
+        'seo-testing-tool',
+        'drizzle'
+      );
+      expect(existsSync(installedDrizzle)).toBe(true);
+
+      // 5. Esegui --version dal pacchetto installato
+      const dbPath = join(tmpDir, 'test.db');
+      const { stdout } = await execFileAsync(
+        NODE,
+        [installedCli, '--version'],
+        {
+          env: { ...process.env, DATABASE_URL: dbPath, NO_COLOR: '1' },
+          timeout: 15_000,
           cwd: tmpDir,
-          stdio: 'pipe',
-          timeout: 120_000,
-        });
-
-        // 3. Verifica che dist/cli.js esista nel pacchetto installato
-        const installedCli = join(
-          tmpDir,
-          'node_modules',
-          'seo-testing-tool',
-          'dist',
-          'cli.js',
-        );
-        expect(existsSync(installedCli)).toBe(true);
-
-        // 4. Verifica che drizzle/ (migrazioni) sia incluso
-        const installedDrizzle = join(
-          tmpDir,
-          'node_modules',
-          'seo-testing-tool',
-          'drizzle',
-        );
-        expect(existsSync(installedDrizzle)).toBe(true);
-
-        // 5. Esegui --version dal pacchetto installato
-        const dbPath = join(tmpDir, 'test.db');
-        const { stdout } = await execFileAsync(
-          NODE,
-          [installedCli, '--version'],
-          {
-            env: { ...process.env, DATABASE_URL: dbPath, NO_COLOR: '1' },
-            timeout: 15_000,
-            cwd: tmpDir,
-          },
-        );
-        const lastLine = stdout.trim().split(/\r?\n/).pop()!.trim();
-        expect(lastLine).toBe(PKG_VERSION);
-      } finally {
-        try {
-          rmSync(tmpDir, { recursive: true, force: true });
-        } catch {
-          /* */
         }
-        try {
-          rmSync(tgzPath, { force: true });
-        } catch {
-          /* */
-        }
+      );
+      const lastLine = stdout.trim().split(/\r?\n/).pop()!.trim();
+      expect(lastLine).toBe(PKG_VERSION);
+    } finally {
+      try {
+        rmSync(tmpDir, { recursive: true, force: true });
+      } catch {
+        /* */
       }
-    },
-    120_000,
-  );
+      try {
+        rmSync(tgzPath, { force: true });
+      } catch {
+        /* */
+      }
+    }
+  }, 120_000);
 });
