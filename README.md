@@ -212,6 +212,16 @@ railway.json                      Railway deploy config (cron 03:00 UTC)
 Dockerfile                        Node.js 18+ container build
 ```
 
+## Minimum Traffic Requirements
+
+The Welch's t-test needs enough data to detect real changes. As a guideline:
+
+- **~50 click/day** minimum (averaged over the monitoring period)
+- **7+ days** of data in both the "before" and "after" periods
+- Sites with fewer than ~1,500 clicks/month are unlikely to produce significant results
+
+The tool will warn you if data is insufficient, but won't prevent you from running the test.
+
 ## Declared Limits (by design)
 
 - Does not work on small sites (insufficient traffic for statistical significance)

@@ -310,6 +310,17 @@ export async function addCommand(): Promise<void> {
     console.log(colors.success(`  Test creato con successo!`));
     console.log(`  ${colors.muted('ID:')} ${test.id}`);
     console.log('');
+    console.log(
+      colors.muted(
+        '  Nota: per risultati affidabili servono almeno ~50 click/giorno'
+      )
+    );
+    console.log(
+      colors.muted(
+        '  e un minimo di 7 giorni di dati per periodo (prima/dopo).'
+      )
+    );
+    console.log('');
   } catch (error) {
     console.error(
       colors.error(
