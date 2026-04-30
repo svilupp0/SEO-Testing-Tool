@@ -44,6 +44,31 @@ interface SendResult {
 
 export class NotificationService {
   private notificationsSent: Set<string> = new Set();
+  private webhookUrl: string | undefined;
+
+  constructor(webhookUrl?: string) {
+    this.webhookUrl = webhookUrl ?? process.env.NOTIFICATION_WEBHOOK_URL;
+  }
+
+  /**
+   * Invia payload JSON al webhook configurato.
+   * Ritorna true se inviato, false se nessun webhook configurato o errore.
+   */
+  private async sendWebhook(payload: Record<string, unknown>): Promise<boolean> {
+    if (!this.webhookUrl) {
+      return false;
+    }
+    try {
+      const res = await fetch(this.webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
 
   /**
    * Test 6.1 - Determina se inviare alert vittoria
@@ -89,8 +114,16 @@ export class NotificationService {
     // Marca come inviata
     this.notificationsSent.add(notificationKey);
 
-    // Qui invieremmo realmente l'email
-    // await emailService.send(...)
+    const improvement = Math.round(testResult.improvement * 100);
+    await this.sendWebhook({
+      event: 'victory_alert',
+      testId: testResult.testId,
+      testName: testResult.testName,
+      text: `🎉 Test "${testResult.testName}" significativo! +${improvement}% (p=${testResult.pValue.toFixed(4)})`,
+      pValue: testResult.pValue,
+      improvement: testResult.improvement,
+      confidenceLevel: testResult.confidenceLevel,
+    });
 
     return {
       sent: true,
@@ -130,12 +163,23 @@ export class NotificationService {
       body += this.formatTestSection(test);
     }
 
-    return {
+    const digest: WeeklyDigest = {
       tests: sortedTests,
-      userEmail: 'user@example.com', // TODO: recuperare email reale da userId
+      userEmail: 'user@example.com',
       subject: 'Report Settimanale - I Tuoi Test SEO',
       body,
     };
+
+    await this.sendWebhook({
+      event: 'weekly_digest',
+      text: `📊 ${summary}`,
+      subject: digest.subject,
+      body: digest.body,
+      testCount: activeTests.length,
+      significantCount: significantTests.length,
+    });
+
+    return digest;
   }
 
   /**
