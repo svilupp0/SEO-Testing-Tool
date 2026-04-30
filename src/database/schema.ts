@@ -101,7 +101,9 @@ export const auditLogs = sqliteTable(
       .$defaultFn(() => crypto.randomUUID()),
     testId: text('testId').notNull(),
     action: text('action').notNull(),
-    userId: text('userId').notNull(),
+    userId: text('userId')
+      .notNull()
+      .references(() => users.id),
     timestamp: text('timestamp')
       .notNull()
       .default(sql`(datetime('now'))`),
