@@ -1,4 +1,4 @@
-# SEO Testing Tool v1.2.2
+# SEO Testing Tool v1.3.0
 
 Did your SEO change actually work — or was it just random fluctuation?
 
@@ -246,5 +246,5 @@ MIT
 
 ---
 
-**Version:** 1.2.2
+**Version:** 1.3.0
 **Last Updated:** 2026-06-22
