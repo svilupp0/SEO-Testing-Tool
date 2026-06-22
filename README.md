@@ -246,5 +246,5 @@ MIT
 
 ---
 
-**Version:** 1.1.0
-**Last Updated:** 2026-04-30
+**Version:** 1.2.2
+**Last Updated:** 2026-06-22
