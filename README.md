@@ -1,4 +1,4 @@
-# SEO Testing Tool v1.2.1
+# SEO Testing Tool v1.2.2
 
 Did your SEO change actually work — or was it just random fluctuation?
 

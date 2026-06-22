@@ -1,6 +1,6 @@
 {
   "name": "seo-testing-tool",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "SEO A/B testing CLI — measure the real impact of changes with Google Search Console data and statistical significance.",
   "type": "module",
   "main": "dist/index.js",
