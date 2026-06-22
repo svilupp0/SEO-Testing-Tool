@@ -17,11 +17,19 @@ The tool does not promise certainty, but supports informed decisions through rig
 npm install -g seo-testing-tool
 ```
 
-Requires Node.js >= 18. On some platforms `better-sqlite3` may require build tools (python, make).
+Requires Node.js >= 18.
+
+> **Build tools required on some platforms** (`better-sqlite3` is a native module):
+> - **Windows**: Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with "Desktop development with C++" workload
+> - **Linux**: `sudo apt install python3 make g++` (Debian/Ubuntu) or equivalent
+> - **macOS**: Xcode Command Line Tools — `xcode-select --install`
 
 > The SQLite database is automatically created at `~/.seo-tool/data.db` on first run. No configuration needed.
 
 ## Getting Started
+
+> **Prerequisite**: You need a Google Cloud project with the **Google Search Console API** enabled.
+> Enable it at [console.cloud.google.com/apis/library/searchconsole.googleapis.com](https://console.cloud.google.com/apis/library/searchconsole.googleapis.com) before running `seo-tool setup`. Without this step, `seo-tool run` will fail with a 403 error.
 
 ```bash
 # 1. Configure Google OAuth2 credentials (interactive wizard)
@@ -74,7 +82,7 @@ seo-tool export <ID>
 | `seo-tool export <id>` | Export metrics to Excel or CSV                                                   |
 | `seo-tool delete <id>` | Delete a test (with interactive confirmation)                                    |
 
-All commands that accept `<id>` support **partial IDs** (e.g. `seo-tool status abcd`).
+All commands that accept `<id>` support **partial IDs** (e.g. `seo-tool status abcd`). If multiple tests share the same prefix, the tool lists all matches and asks you to be more specific.
 
 ### Examples
 
@@ -110,6 +118,70 @@ seo-tool export abcd1234
 seo-tool delete abcd1234
 ```
 
+## Example Output
+
+After running `seo-tool demo`, here is what the main commands look like:
+
+**`seo-tool list`**
+```
+  2 test trovati
+
+  ID        Nome                  Stato      p-Value   Migliora.   Ultimo Sync
+  ──────────────────────────────────────────────────────────────────────────────
+  a1b2c3d4  Esperimento Positivo  completed  0.0010    +46.6%      22/6/2026
+  e5f6g7h8  Esperimento Neutro    running    0.7200    +1.2%       22/6/2026
+```
+
+**`seo-tool status a1b2c3d4`**
+```
+  Esperimento Positivo
+  ────────────────────────────────────────
+
+  ID:          a1b2c3d4-...
+  Sito:        sc-domain:example.com
+  Stato:       completed
+  Inizio:      1/1/2024
+  Split Date:  1/3/2024
+
+  Analisi Statistica
+  ────────────────────────────────────────
+  Risultato:   SIGNIFICATIVO
+  p-Value:     0.0010
+  Variazione:  ↑ +46.6%
+  t-Statistic: 3.4567
+  Gradi lib.:  68.0
+
+  Dati
+  ────────────────────────────────────────
+  Before:      1500.0 media clicks  (35 giorni)
+  After:       2200.0 media clicks  (35 giorni)
+
+  Trend Clicks
+  ────────────────────────────────────────
+  2200 ┤                         ╭────────
+  1850 ┤              ╭──────────╯
+  1500 ┼──────────────╯
+       ──────────────▲──────────────────
+                  Split Date
+```
+
+**`seo-tool run`**
+```
+  Sincronizzazione Test Attivi
+  ────────────────────────────────────────
+
+  Avvio sincronizzazione...
+
+  ✔ a1b2c3d4  +46.6%  p=0.0010
+  ○ e5f6g7h8  +1.2%   p=0.7200
+
+  ────────────────────────────────────────
+  2 completati · 0 errori
+```
+
+> **Note on data latency**: Google Search Console data typically has a 2–4 day delay.
+> If `seo-tool run` shows no new data after a recent change, this is expected — try again in a few days.
+
 ## Development (from source)
 
 ```bash
@@ -129,7 +201,7 @@ GOOGLE_REDIRECT_URI=http://localhost:3000/auth/callback
 # Optional: default ~/.seo-tool/data.db
 # DATABASE_URL=file:/custom/path/data.db
 
-# Optional: webhook for notifications (Slack, Discord, n8n, Zapier, etc.)
+# Optional: webhook for notifications (coming soon — not yet active)
 # NOTIFICATION_WEBHOOK_URL=https://hooks.slack.com/services/xxx/yyy/zzz
 ```
 
@@ -163,6 +235,8 @@ npm run format
 
 ## Deploy on Railway (optional)
 
+Use Railway if you want `seo-tool run` to sync automatically every night without keeping your machine on. For local or CI use, skip this section.
+
 The project includes configuration for Railway with a nightly cron job and embedded SQLite database.
 
 ### Railway Setup
@@ -178,7 +252,7 @@ The cron job (`railway.json`) runs `npm run cli:run` every night at **03:00 UTC*
 
 - Fetches new data from Google Search Console
 - Runs statistical analysis (Welch's t-test)
-- Sends notifications if results are statistically significant
+- Updates test results in the local database
 
 ### Manual Docker Build
 
@@ -234,11 +308,6 @@ The tool will warn you if data is insufficient, but won't prevent you from runni
 - Does not guarantee results (provides probabilities, not certainties)
 
 These limits increase trust in the tool.
-
-## Documentation
-
-- **[PROGRESS.md](./PROGRESS.md)** — Implementation progress
-- **[blueprint.md](./blueprint.md)** — Full technical specification
 
 ## License
 
