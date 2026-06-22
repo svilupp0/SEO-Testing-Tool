@@ -145,7 +145,7 @@ GOOGLE_REDIRECT_URI=http://localhost:3000/auth/callback
 DATABASE_URL=~/.seo-tool/data.db   # optional — this is the default
 ```
 
-No setup wizard exists yet for creating these credentials. See `CREDENTIALS-SETUP.md` in the repo (not included in the npm package).
+Run `seo-tool setup` for an interactive wizard that opens Google Cloud Console and writes these variables to `.env` (supports JSON file upload or manual entry). `seo-tool login` now opens the browser automatically and captures the OAuth code via a local callback server on port 3000 — no copy-paste required. Falls back to manual code entry if port 3000 is busy.
 
 ## Pull Requests
 

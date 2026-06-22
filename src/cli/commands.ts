@@ -7,6 +7,7 @@
 import { createInterface } from 'readline/promises';
 import { writeFile, readFile } from 'fs/promises';
 import open from 'open';
+import { startCallbackServer } from '../auth/LocalCallbackServer.js';
 import path from 'path';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
@@ -117,37 +118,49 @@ export async function loginCommand(): Promise<void> {
     const authUrl = oauthService.getAuthorizationUrl(oauthConfig.scopes);
 
     console.log(
-      colors.info(
-        '  \uD83D\uDD10 Per collegare il tuo account Google, apri questo URL nel browser:'
-      )
+      colors.info('  Per collegare il tuo account Google, apri questo URL:')
     );
     console.log('');
     console.log(`  ${chalk.underline(authUrl)}`);
     console.log('');
-    console.log(
-      colors.muted(
-        '  Dopo il login, Google ti mostrerà un Codice di Autorizzazione.'
-      )
-    );
-    console.log(colors.muted('  Copialo e incollalo qui sotto.'));
-    console.log('');
 
-    // Chiedi il codice di autorizzazione
-    const { code } = await inquirer.prompt([
-      {
-        type: 'input',
-        name: 'code',
-        message: 'Incolla il Codice di Autorizzazione:',
-        validate: (input: string) =>
-          input.trim().length > 0 || 'Il codice è obbligatorio.',
-      },
-    ]);
+    // Prova flusso automatico, fallback manuale se porta occupata / timeout / accesso negato
+    let finalCode: string;
+
+    try {
+      const { promise } = await startCallbackServer();
+
+      try {
+        await open(authUrl);
+        console.log(colors.info('  Browser aperto. Completa il login su Google...'));
+      } catch {
+        console.log(colors.muted("  Apri l'URL sopra manualmente nel browser."));
+      }
+
+      console.log(colors.muted('  In attesa del callback... (timeout: 2 minuti)'));
+      const { code, state } = await promise;
+      oauthService.validateState(state);
+      finalCode = code;
+    } catch {
+      console.log(colors.muted('  Inserisci il codice di autorizzazione manualmente.'));
+      console.log('');
+      const { code } = await inquirer.prompt([
+        {
+          type: 'input',
+          name: 'code',
+          message: 'Incolla il Codice di Autorizzazione:',
+          validate: (input: string) =>
+            input.trim().length > 0 || 'Il codice è obbligatorio.',
+        },
+      ]);
+      finalCode = (code as string).trim();
+    }
 
     console.log('');
     console.log(colors.muted('  Scambio codice in corso...'));
 
     // Scambia il codice per i token
-    const tokenResponse = await oauthService.exchangeCodeForTokens(code.trim());
+    const tokenResponse = await oauthService.exchangeCodeForTokens(finalCode);
 
     // Determina userId
     const userId = process.env['USER_ID'] || 'default-user';

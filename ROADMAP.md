@@ -65,6 +65,13 @@ Il comando `seo-tool login` presuppone che `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_S
 
 **Criterio di completamento**: un utente senza `.env` può eseguire `seo-tool setup` e arrivare a `seo-tool login` senza leggere documentazione esterna. ✓
 
+**Interventi effettuati (v3 — 2026-06-22) — `seo-tool login` automatico**:
+
+- Aggiunto `src/auth/LocalCallbackServer.ts` — server HTTP su `127.0.0.1:3000` (loopback) che cattura il redirect OAuth2 di Google senza richiedere copia-incolla del codice. Due fasi: `startCallbackServer()` risolve quando il server è pronto; la promise interna risolve al primo callback valido (`?code=...&state=...`)
+- Ristrutturato `loginCommand()` in `src/cli/commands.ts`: apertura browser automatica + attesa callback locale; fallback graceful al flusso manuale (incolla codice) se la porta è occupata (`EADDRINUSE`), il browser non è disponibile, il callback va in timeout, o Google rifiuta il consenso
+- `validateState()` chiamata sulla risposta del callback per verificare il parametro CSRF state
+- Test aggiornati: 18 test in `tests/cli/login-command.test.ts` (8 nuovi + 1 aggiornato, tutti verdi)
+
 ---
 
 ## 4. Soglia minima di traffico documentata

@@ -2,7 +2,8 @@
  * Test - Comando login CLI
  *
  * Verifica: generazione URL, scambio codice, salvataggio token,
- * gestione errori credenziali mancanti, upsert token esistenti
+ * gestione errori credenziali mancanti, upsert token esistenti,
+ * flusso automatico via LocalCallbackServer, fallback manuale
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -54,9 +55,10 @@ vi.mock('../../src/cli/formatters.js', () => ({
   renderClicksChart: () => '',
 }));
 
-// Mock GoogleOAuthService con vi.hoisted per evitare problemi di hoisting
+// Mock GoogleOAuthService
 const mockGetAuthorizationUrl = vi.fn();
 const mockExchangeCodeForTokens = vi.fn();
+const mockValidateState = vi.fn();
 vi.mock('../../src/auth/GoogleOAuthService.js', () => ({
   GoogleOAuthService: class {
     getAuthorizationUrl(...args: unknown[]) {
@@ -64,6 +66,9 @@ vi.mock('../../src/auth/GoogleOAuthService.js', () => ({
     }
     exchangeCodeForTokens(...args: unknown[]) {
       return mockExchangeCodeForTokens(...args);
+    }
+    validateState(...args: unknown[]) {
+      return mockValidateState(...args);
     }
   },
 }));
@@ -82,6 +87,18 @@ vi.mock('inquirer', () => ({
   },
 }));
 
+// Mock open
+const mockOpen = vi.fn().mockResolvedValue(undefined);
+vi.mock('open', () => ({
+  default: (...args: unknown[]) => mockOpen(...args),
+}));
+
+// Mock LocalCallbackServer
+const mockStartCallbackServer = vi.fn();
+vi.mock('../../src/auth/LocalCallbackServer.js', () => ({
+  startCallbackServer: (...args: unknown[]) => mockStartCallbackServer(...args),
+}));
+
 // Mock TokenManager (usato solo da runCommand, non da login)
 vi.mock('../../src/auth/TokenManager.js', () => ({
   TokenManager: vi.fn().mockImplementation(() => ({
@@ -96,6 +113,7 @@ describe('Comando login', () => {
   let logSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     testDb = createTestDb();
     delete process.env['USER_ID'];
 
@@ -119,6 +137,11 @@ describe('Comando login', () => {
     });
     mockInquirerPrompt.mockResolvedValue({
       code: '4/0mock-authorization-code',
+    });
+    mockOpen.mockResolvedValue(undefined);
+    mockValidateState.mockReturnValue(undefined);
+    mockStartCallbackServer.mockResolvedValue({
+      promise: Promise.resolve({ code: '4/0mock-authorization-code', state: 'mock-state' }),
     });
 
     logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -263,15 +286,99 @@ describe('Comando login', () => {
     expect(allTokens).toHaveLength(0);
   });
 
-  it("dovrebbe trimmare il codice incollato dall'utente", async () => {
-    mockInquirerPrompt.mockResolvedValue({
-      code: '  4/0mock-code-with-spaces  ',
-    });
+  it("dovrebbe trimmare il codice nel flusso manuale (fallback EADDRINUSE)", async () => {
+    mockStartCallbackServer.mockRejectedValueOnce(
+      Object.assign(new Error('listen EADDRINUSE :::3000'), { code: 'EADDRINUSE' })
+    );
+    mockInquirerPrompt.mockResolvedValue({ code: '  4/0mock-code-with-spaces  ' });
 
     await loginCommand();
 
     expect(mockExchangeCodeForTokens).toHaveBeenCalledWith(
       '4/0mock-code-with-spaces'
     );
+  });
+
+  // --- Nuovi test Fase B ---
+
+  it("dovrebbe aprire il browser con l'URL di autorizzazione", async () => {
+    await loginCommand();
+
+    expect(mockOpen).toHaveBeenCalledOnce();
+    expect(mockOpen).toHaveBeenCalledWith(
+      'https://accounts.google.com/o/oauth2/v2/auth?mock=1'
+    );
+  });
+
+  it('dovrebbe usare il codice ricevuto automaticamente via callback locale', async () => {
+    await loginCommand();
+
+    expect(mockExchangeCodeForTokens).toHaveBeenCalledWith(
+      '4/0mock-authorization-code'
+    );
+    expect(mockInquirerPrompt).not.toHaveBeenCalled();
+  });
+
+  it('dovrebbe validare il parametro state ricevuto dal callback', async () => {
+    await loginCommand();
+
+    expect(mockValidateState).toHaveBeenCalledWith('mock-state');
+  });
+
+  it('dovrebbe mostrare messaggio di attesa browser nel flusso automatico', async () => {
+    await loginCommand();
+
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    expect(output).toContain('Browser aperto');
+  });
+
+  it('dovrebbe usare il flusso manuale se la porta è occupata (EADDRINUSE)', async () => {
+    mockStartCallbackServer.mockRejectedValueOnce(
+      Object.assign(new Error('listen EADDRINUSE :::3000'), { code: 'EADDRINUSE' })
+    );
+    mockInquirerPrompt.mockResolvedValue({ code: '4/0manual-code' });
+
+    await loginCommand();
+
+    expect(mockExchangeCodeForTokens).toHaveBeenCalledWith('4/0manual-code');
+    expect(mockOpen).not.toHaveBeenCalled();
+  });
+
+  it('dovrebbe usare il flusso manuale se il callback va in timeout', async () => {
+    mockStartCallbackServer.mockResolvedValue({
+      promise: Promise.reject(new Error('Timeout: nessun callback ricevuto entro 2 minuti.')),
+    });
+    mockInquirerPrompt.mockResolvedValue({ code: '4/0timeout-fallback-code' });
+
+    await loginCommand();
+
+    expect(mockExchangeCodeForTokens).toHaveBeenCalledWith('4/0timeout-fallback-code');
+  });
+
+  it('dovrebbe continuare se il browser non si apre (flusso automatico con URL visibile)', async () => {
+    mockOpen.mockRejectedValueOnce(new Error('spawn failed'));
+
+    await loginCommand();
+
+    // Il token viene comunque salvato via callback locale
+    const token = testDb
+      .select()
+      .from(oauthTokens)
+      .where(eq(oauthTokens.userId, 'default-user'))
+      .get();
+    expect(token).toBeDefined();
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    expect(output).toContain('accounts.google.com');
+  });
+
+  it('dovrebbe usare il flusso manuale se Google rifiuta il consenso (access_denied)', async () => {
+    mockStartCallbackServer.mockResolvedValue({
+      promise: Promise.reject(new Error('OAuth error: access_denied')),
+    });
+    mockInquirerPrompt.mockResolvedValue({ code: '4/0after-denied' });
+
+    await loginCommand();
+
+    expect(mockExchangeCodeForTokens).toHaveBeenCalledWith('4/0after-denied');
   });
 });
