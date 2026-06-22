@@ -1,6 +1,8 @@
-# SEO Testing Tool v1.2.0
+# SEO Testing Tool v1.2.1
 
-CLI tool for SEO experiments with statistical analysis (Welch's t-test) and Google Search Console integration. Local SQLite database (zero configuration).
+Did your SEO change actually work — or was it just random fluctuation?
+
+**seo-testing-tool** connects to Google Search Console, compares traffic before and after your change, and tells you whether the difference is statistically significant. Local SQLite database, zero configuration.
 
 ## Vision
 
