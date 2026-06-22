@@ -88,7 +88,8 @@
     "dotenv": "^17.2.4",
     "drizzle-orm": "^0.45.1",
     "exceljs": "^4.4.0",
-    "inquirer": "^13.2.2"
+    "inquirer": "^13.2.2",
+    "open": "^10.2.0"
   },
   "engines": {
     "node": ">=18.0.0"

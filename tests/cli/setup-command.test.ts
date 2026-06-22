@@ -69,6 +69,12 @@ vi.mock('../../src/cli/formatters.js', () => ({
   renderClicksChart: () => '',
 }));
 
+// --- Mock open ---
+const mockOpen = vi.fn().mockResolvedValue(undefined);
+vi.mock('open', () => ({
+  default: (...args: unknown[]) => mockOpen(...args),
+}));
+
 // --- Mock inquirer ---
 const mockInquirerPrompt = vi.fn();
 vi.mock('inquirer', () => ({
@@ -102,8 +108,14 @@ describe('Comando setup', () => {
   let logSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    // resetAllMocks azzera call history + implementazioni + coda once (clearAllMocks non basta)
+    vi.resetAllMocks();
+
+    mockOpen.mockResolvedValue(undefined);
     mockWriteFile.mockResolvedValue(undefined);
+    mockReadFile.mockRejectedValue(
+      Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+    );
     testDb = createTestDb();
 
     // Nessuna variabile Google nell'ambiente
@@ -111,17 +123,15 @@ describe('Comando setup', () => {
     delete process.env['GOOGLE_CLIENT_SECRET'];
     delete process.env['GOOGLE_REDIRECT_URI'];
 
-    // .env non esiste per default
-    mockReadFile.mockRejectedValue(
-      Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
-    );
-
-    // Risposte di default per il wizard (credenziali nuove)
-    mockInquirerPrompt.mockResolvedValue({
-      clientId: 'my-client-id',
-      clientSecret: 'my-client-secret',
-      redirectUri: 'http://localhost:3000/auth/callback',
-    });
+    // Risposte di default: nessuna cred → pausa → manuale → credenziali
+    mockInquirerPrompt
+      .mockResolvedValueOnce({ _: '' })
+      .mockResolvedValueOnce({ mode: 'manual' })
+      .mockResolvedValueOnce({
+        clientId: 'my-client-id',
+        clientSecret: 'my-client-secret',
+        redirectUri: 'http://localhost:3000/auth/callback',
+      });
 
     logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
   });
@@ -153,11 +163,15 @@ describe('Comando setup', () => {
   });
 
   it('dovrebbe usare il redirect URI di default se lasciato vuoto', async () => {
-    mockInquirerPrompt.mockResolvedValue({
-      clientId: 'my-client-id',
-      clientSecret: 'my-client-secret',
-      redirectUri: '',
-    });
+    mockInquirerPrompt.mockReset();
+    mockInquirerPrompt
+      .mockResolvedValueOnce({ _: '' })
+      .mockResolvedValueOnce({ mode: 'manual' })
+      .mockResolvedValueOnce({
+        clientId: 'my-client-id',
+        clientSecret: 'my-client-secret',
+        redirectUri: '',
+      });
 
     await setupCommand();
 
@@ -196,6 +210,7 @@ describe('Comando setup', () => {
     process.env['GOOGLE_CLIENT_ID'] = 'existing-id';
     process.env['GOOGLE_CLIENT_SECRET'] = 'existing-secret';
 
+    mockInquirerPrompt.mockReset();
     mockInquirerPrompt.mockResolvedValueOnce({ overwrite: false });
 
     await setupCommand();
@@ -209,12 +224,16 @@ describe('Comando setup', () => {
     process.env['GOOGLE_CLIENT_ID'] = 'existing-id';
     process.env['GOOGLE_CLIENT_SECRET'] = 'existing-secret';
 
-    mockInquirerPrompt.mockResolvedValueOnce({ overwrite: true });
-    mockInquirerPrompt.mockResolvedValueOnce({
-      clientId: 'new-client-id',
-      clientSecret: 'new-client-secret',
-      redirectUri: 'http://localhost:3000/auth/callback',
-    });
+    mockInquirerPrompt.mockReset();
+    mockInquirerPrompt
+      .mockResolvedValueOnce({ overwrite: true })
+      .mockResolvedValueOnce({ _: '' })
+      .mockResolvedValueOnce({ mode: 'manual' })
+      .mockResolvedValueOnce({
+        clientId: 'new-client-id',
+        clientSecret: 'new-client-secret',
+        redirectUri: 'http://localhost:3000/auth/callback',
+      });
 
     await setupCommand();
 
@@ -228,5 +247,174 @@ describe('Comando setup', () => {
 
     const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
     expect(output).toContain('seo-tool login');
+  });
+
+  it('dovrebbe aprire il browser su Google Cloud Console', async () => {
+    await setupCommand();
+
+    expect(mockOpen).toHaveBeenCalledOnce();
+    expect(mockOpen).toHaveBeenCalledWith(
+      'https://console.cloud.google.com/apis/credentials'
+    );
+  });
+
+  it('dovrebbe mostrare la guida numerata in 5 step', async () => {
+    await setupCommand();
+
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    expect(output).toContain('1.');
+    expect(output).toContain('2.');
+    expect(output).toContain('3.');
+    expect(output).toContain('4.');
+    expect(output).toContain('5.');
+  });
+
+  it('dovrebbe scrivere le credenziali leggendo un file JSON formato installed', async () => {
+    const fakeJson = JSON.stringify({
+      installed: {
+        client_id: 'json-client-id',
+        client_secret: 'json-client-secret',
+        redirect_uris: ['http://localhost'],
+        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+        token_uri: 'https://oauth2.googleapis.com/token',
+      },
+    });
+    // Primo readFile: .env non esiste; secondo readFile: il file JSON
+    mockReadFile
+      .mockRejectedValueOnce(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
+      .mockResolvedValueOnce(fakeJson);
+
+    mockInquirerPrompt.mockReset();
+    mockInquirerPrompt
+      .mockResolvedValueOnce({ _: '' })
+      .mockResolvedValueOnce({ mode: 'json' })
+      .mockResolvedValueOnce({ jsonPath: '/tmp/client_secret.json' });
+
+    await setupCommand();
+
+    expect(mockWriteFile).toHaveBeenCalledOnce();
+    const content: string = mockWriteFile.mock.calls[0][1];
+    expect(content).toContain('GOOGLE_CLIENT_ID=json-client-id');
+    expect(content).toContain('GOOGLE_CLIENT_SECRET=json-client-secret');
+  });
+
+  it('dovrebbe scrivere le credenziali leggendo un file JSON formato web', async () => {
+    const fakeJson = JSON.stringify({
+      web: {
+        client_id: 'web-client-id',
+        client_secret: 'web-client-secret',
+        redirect_uris: ['https://example.com/callback'],
+        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+        token_uri: 'https://oauth2.googleapis.com/token',
+      },
+    });
+    mockReadFile
+      .mockRejectedValueOnce(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
+      .mockResolvedValueOnce(fakeJson);
+
+    mockInquirerPrompt.mockReset();
+    mockInquirerPrompt
+      .mockResolvedValueOnce({ _: '' })
+      .mockResolvedValueOnce({ mode: 'json' })
+      .mockResolvedValueOnce({ jsonPath: '/tmp/client_secret_web.json' });
+
+    await setupCommand();
+
+    const content: string = mockWriteFile.mock.calls[0][1];
+    expect(content).toContain('GOOGLE_CLIENT_ID=web-client-id');
+    expect(content).toContain('GOOGLE_CLIENT_SECRET=web-client-secret');
+  });
+
+  it('dovrebbe impostare GOOGLE_REDIRECT_URI a localhost:3000 indipendentemente dal file JSON', async () => {
+    const fakeJson = JSON.stringify({
+      installed: {
+        client_id: 'json-id',
+        client_secret: 'json-secret',
+        redirect_uris: ['http://localhost'],
+      },
+    });
+    mockReadFile
+      .mockRejectedValueOnce(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
+      .mockResolvedValueOnce(fakeJson);
+
+    mockInquirerPrompt.mockReset();
+    mockInquirerPrompt
+      .mockResolvedValueOnce({ _: '' })
+      .mockResolvedValueOnce({ mode: 'json' })
+      .mockResolvedValueOnce({ jsonPath: '/tmp/client_secret.json' });
+
+    await setupCommand();
+
+    const content: string = mockWriteFile.mock.calls[0][1];
+    expect(content).toContain(
+      'GOOGLE_REDIRECT_URI=http://localhost:3000/auth/callback'
+    );
+    expect(content).not.toContain('GOOGLE_REDIRECT_URI=http://localhost\n');
+  });
+
+  it('dovrebbe mostrare errore se il file JSON non esiste', async () => {
+    mockReadFile
+      .mockRejectedValueOnce(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
+      .mockRejectedValueOnce(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+
+    mockInquirerPrompt.mockReset();
+    mockInquirerPrompt
+      .mockResolvedValueOnce({ _: '' })
+      .mockResolvedValueOnce({ mode: 'json' })
+      .mockResolvedValueOnce({ jsonPath: '/tmp/non-esiste.json' });
+
+    await setupCommand();
+
+    expect(mockWriteFile).not.toHaveBeenCalled();
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    expect(output).toContain('non trovato');
+  });
+
+  it('dovrebbe mostrare errore se il file JSON è sintatticamente invalido', async () => {
+    mockReadFile
+      .mockRejectedValueOnce(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
+      .mockResolvedValueOnce('{ questo non è JSON valido }');
+
+    mockInquirerPrompt.mockReset();
+    mockInquirerPrompt
+      .mockResolvedValueOnce({ _: '' })
+      .mockResolvedValueOnce({ mode: 'json' })
+      .mockResolvedValueOnce({ jsonPath: '/tmp/broken.json' });
+
+    await setupCommand();
+
+    expect(mockWriteFile).not.toHaveBeenCalled();
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    expect(output).toContain('non valido');
+  });
+
+  it('dovrebbe mostrare errore se il file JSON non ha il formato corretto (no installed/web)', async () => {
+    mockReadFile
+      .mockRejectedValueOnce(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }))
+      .mockResolvedValueOnce(
+        JSON.stringify({ type: 'service_account', project_id: 'test' })
+      );
+
+    mockInquirerPrompt.mockReset();
+    mockInquirerPrompt
+      .mockResolvedValueOnce({ _: '' })
+      .mockResolvedValueOnce({ mode: 'json' })
+      .mockResolvedValueOnce({ jsonPath: '/tmp/service-account.json' });
+
+    await setupCommand();
+
+    expect(mockWriteFile).not.toHaveBeenCalled();
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    expect(output).toContain('Formato file non riconosciuto');
+  });
+
+  it('dovrebbe continuare se il browser non può aprirsi (fallback URL in output)', async () => {
+    mockOpen.mockRejectedValueOnce(new Error('spawn failed'));
+
+    await setupCommand();
+
+    expect(mockWriteFile).toHaveBeenCalledOnce();
+    const output = logSpy.mock.calls.map((c) => c.join(' ')).join('\n');
+    expect(output).toContain('console.cloud.google.com');
   });
 });

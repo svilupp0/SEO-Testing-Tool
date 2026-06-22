@@ -43,16 +43,25 @@ Ordinati per priorità.
 ## 3. Wizard configurazione OAuth2 (`seo-tool setup`)
 
 **Priorità**: Alta
-**Stato**: Completato (2026-03-01)
+**Stato**: Completato (2026-03-01) — migliorato (2026-06-22)
 
 Il comando `seo-tool login` presuppone che `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET` siano già nel file `.env`. Non esiste nessuna guida interattiva. `CREDENTIALS-SETUP.md` esiste nel repository ma non viene incluso nel pacchetto npm.
 
-**Interventi effettuati**:
+**Interventi effettuati (v1 — 2026-03-01)**:
 
 - Aggiunto `updateEnvVars()` helper (private) in `src/cli/commands.ts` — preserva le var non-Google, aggiorna senza duplicati
 - Aggiunto `setupCommand()` in `src/cli/commands.ts` con wizard interattivo completo
 - Registrato `seo-tool setup` in `src/cli.ts`
-- 8 test in `tests/cli/setup-command.test.ts` (tutti verdi)
+
+**Interventi effettuati (v2 — 2026-06-22)**:
+
+- Apertura automatica del browser su Google Cloud Console tramite pacchetto `open`
+- URL sempre visibile nel terminale (anche quando il browser si apre correttamente)
+- Guida numerata in 5 step con pausa interattiva tra la guida e la raccolta credenziali
+- Supporto caricamento file `client_secret_*.json` scaricato da Google Cloud Console (formati `installed` e `web`) come alternativa all'inserimento manuale
+- `GOOGLE_REDIRECT_URI` sempre forzato a `http://localhost:3000/auth/callback` indipendentemente dal contenuto del file JSON
+- Gestione errori: file non trovato, JSON malformato, formato non riconosciuto (es. service account), browser non disponibile (fallback URL in output)
+- Test aggiornati: 17 test in `tests/cli/setup-command.test.ts` (tutti verdi)
 
 **Criterio di completamento**: un utente senza `.env` può eseguire `seo-tool setup` e arrivare a `seo-tool login` senza leggere documentazione esterna. ✓
 

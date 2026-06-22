@@ -6,6 +6,7 @@
 
 import { createInterface } from 'readline/promises';
 import { writeFile, readFile } from 'fs/promises';
+import open from 'open';
 import path from 'path';
 import chalk from 'chalk';
 import inquirer from 'inquirer';
@@ -632,6 +633,10 @@ export async function exportCommand(
   }
 }
 
+const GOOGLE_CLOUD_CONSOLE_URL =
+  'https://console.cloud.google.com/apis/credentials';
+const DEFAULT_REDIRECT_URI = 'http://localhost:3000/auth/callback';
+
 /**
  * Aggiorna le righe di un file .env sostituendo le variabili già presenti
  * e aggiungendo in coda quelle mancanti. Le variabili non-Google vengono preservate.
@@ -665,11 +670,13 @@ function updateEnvVars(
  * setup — Wizard interattivo per configurare le credenziali Google OAuth2
  */
 export async function setupCommand(): Promise<void> {
+  // BLOCCO A — Header
   console.log('');
   console.log(colors.header('  Configurazione Credenziali Google OAuth2'));
   console.log(colors.muted('  ' + '\u2500'.repeat(40)));
   console.log('');
 
+  // BLOCCO B — Rilevamento credenziali esistenti
   const hasClientId = !!process.env['GOOGLE_CLIENT_ID'];
   const hasClientSecret = !!process.env['GOOGLE_CLIENT_SECRET'];
 
@@ -703,44 +710,7 @@ export async function setupCommand(): Promise<void> {
     }
   }
 
-  console.log(colors.info('  Per ottenere le credenziali OAuth2 Google:'));
-  console.log('');
-  console.log(colors.muted('  1. Vai su Google Cloud Console:'));
-  console.log('     https://console.cloud.google.com/apis/credentials');
-  console.log(
-    colors.muted('  2. Crea un progetto (o selezionane uno esistente)')
-  );
-  console.log(
-    colors.muted(
-      '  3. Crea credenziali \u2192 OAuth 2.0 Client ID \u2192 Applicazione desktop'
-    )
-  );
-  console.log(colors.muted('  4. Copia Client ID e Client Secret'));
-  console.log('');
-
-  const { clientId, clientSecret, redirectUri } = await inquirer.prompt([
-    {
-      type: 'input',
-      name: 'clientId',
-      message: 'GOOGLE_CLIENT_ID:',
-      validate: (input: string) =>
-        input.trim().length > 0 || 'Il Client ID è obbligatorio.',
-    },
-    {
-      type: 'password',
-      name: 'clientSecret',
-      message: 'GOOGLE_CLIENT_SECRET:',
-      validate: (input: string) =>
-        input.trim().length > 0 || 'Il Client Secret è obbligatorio.',
-    },
-    {
-      type: 'input',
-      name: 'redirectUri',
-      message: 'GOOGLE_REDIRECT_URI:',
-      default: 'http://localhost:3000/auth/callback',
-    },
-  ]);
-
+  // Leggi il .env esistente prima della parte interattiva
   const envPath = path.join(process.cwd(), '.env');
   let existingContent = '';
   try {
@@ -749,15 +719,158 @@ export async function setupCommand(): Promise<void> {
     // File .env non esiste — partiamo da zero
   }
 
+  // BLOCCO C — Apertura browser + guida numerata
+  console.log(colors.muted(`  ${GOOGLE_CLOUD_CONSOLE_URL}`));
+  try {
+    console.log(colors.info('  Apro Google Cloud Console nel browser...'));
+    await open(GOOGLE_CLOUD_CONSOLE_URL);
+  } catch {
+    console.log(colors.muted('  (impossibile aprire il browser — visita il link sopra)'));
+  }
+
+  console.log('');
+  console.log(colors.info('  Segui questi passaggi in Google Cloud Console:'));
+  console.log('');
+  console.log(colors.muted('  1. Seleziona o crea un progetto Google Cloud'));
+  console.log(colors.muted('  2. Vai su "API e servizi" \u2192 "Credenziali"'));
+  console.log(colors.muted('  3. Clicca "Crea credenziali" \u2192 "ID client OAuth 2.0"'));
+  console.log(colors.muted('  4. Tipo applicazione: "App desktop" \u2192 assegna un nome \u2192 Crea'));
+  console.log(
+    colors.muted('  5. Scarica il file JSON oppure copia Client ID e Client Secret')
+  );
+  console.log('');
+
+  await inquirer.prompt([
+    { type: 'input', name: '_', message: 'Premi INVIO quando sei pronto...' },
+  ]);
+
+  // BLOCCO D — Selezione modalità
+  const { mode } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'mode',
+      message: 'Come vuoi inserire le credenziali?',
+      choices: [
+        {
+          name: 'Carica file JSON scaricato da Google (client_secret_*.json)',
+          value: 'json',
+        },
+        {
+          name: 'Inserisci manualmente Client ID e Client Secret',
+          value: 'manual',
+        },
+      ],
+    },
+  ]);
+
+  // BLOCCO E/F — Raccolta credenziali (JSON o manuale)
+  let clientId: string;
+  let clientSecret: string;
+  let customRedirectUri: string = DEFAULT_REDIRECT_URI;
+
+  if (mode === 'json') {
+    // BLOCCO E — Carica file JSON
+    const { jsonPath } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'jsonPath',
+        message: 'Percorso del file JSON scaricato:',
+        validate: (input: string) =>
+          input.trim().length > 0 || 'Il percorso è obbligatorio.',
+      },
+    ]);
+
+    let rawContent: string;
+    try {
+      rawContent = await readFile((jsonPath as string).trim(), 'utf-8');
+    } catch {
+      console.log(
+        colors.error('  File non trovato. Controlla il percorso e riprova.')
+      );
+      console.log('');
+      return;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawContent);
+    } catch {
+      console.log(
+        colors.error(
+          '  File non valido. Assicurati di aver scaricato il file JSON da Google Cloud Console.'
+        )
+      );
+      console.log('');
+      return;
+    }
+
+    const asObj = parsed as Record<string, unknown>;
+    const rawCreds = asObj['installed'] ?? asObj['web'];
+
+    if (!rawCreds || typeof rawCreds !== 'object') {
+      console.log(
+        colors.error(
+          '  Formato file non riconosciuto. Usa il file client_secret_*.json scaricato da Google Cloud Console.'
+        )
+      );
+      console.log('');
+      return;
+    }
+
+    const creds = rawCreds as Record<string, unknown>;
+    clientId = String(creds['client_id'] ?? '').trim();
+    clientSecret = String(creds['client_secret'] ?? '').trim();
+
+    if (!clientId || !clientSecret) {
+      console.log(
+        colors.error(
+          '  File JSON non contiene client_id o client_secret validi.'
+        )
+      );
+      console.log('');
+      return;
+    }
+    // customRedirectUri rimane DEFAULT_REDIRECT_URI (override del valore nel JSON)
+  } else {
+    // BLOCCO F — Inserimento manuale
+    const answers = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'clientId',
+        message: 'GOOGLE_CLIENT_ID:',
+        validate: (input: string) =>
+          input.trim().length > 0 || 'Il Client ID è obbligatorio.',
+      },
+      {
+        type: 'password',
+        name: 'clientSecret',
+        message: 'GOOGLE_CLIENT_SECRET:',
+        validate: (input: string) =>
+          input.trim().length > 0 || 'Il Client Secret è obbligatorio.',
+      },
+      {
+        type: 'input',
+        name: 'redirectUri',
+        message: 'GOOGLE_REDIRECT_URI:',
+        default: DEFAULT_REDIRECT_URI,
+      },
+    ]);
+    clientId = (answers.clientId as string).trim();
+    clientSecret = (answers.clientSecret as string).trim();
+    customRedirectUri =
+      (answers.redirectUri as string).trim() || DEFAULT_REDIRECT_URI;
+  }
+
+  // BLOCCO G — Scrittura .env
   const newContent = updateEnvVars(existingContent, {
-    GOOGLE_CLIENT_ID: (clientId as string).trim(),
-    GOOGLE_CLIENT_SECRET: (clientSecret as string).trim(),
-    GOOGLE_REDIRECT_URI:
-      (redirectUri as string).trim() || 'http://localhost:3000/auth/callback',
+    GOOGLE_CLIENT_ID: clientId,
+    GOOGLE_CLIENT_SECRET: clientSecret,
+    GOOGLE_REDIRECT_URI: customRedirectUri,
   });
 
   await writeFile(envPath, newContent, 'utf-8');
 
+  // BLOCCO H — Messaggio finale
   console.log('');
   console.log(
     colors.success('  \u2713 File .env aggiornato con le credenziali Google.')
